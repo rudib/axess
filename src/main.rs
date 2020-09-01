@@ -60,7 +60,7 @@ fn run() -> Result<(), Box<dyn Error>> {
         (Some(axe_in), Some(axe_out)) => {
 
 
-            println!("Found!");
+            println!("Found some midi ports!");
 
             let connection = FractalConnection::connect(midi_in, axe_in, midi_out, axe_out).unwrap();
 
@@ -104,7 +104,7 @@ impl FractalConnection {
         let mut buffer = Mutex::new(vec![]);
         let in_connection = midi_in.connect(midi_in_port, "midir-in", move |stamp, message, _| {
             
-            //println!("{}: {:?} (len = {})", stamp, message, message.len());
+            println!("{}: {:?} (len = {})", stamp, message, message.len());
             
             if let Ok(mut buffer) = buffer.lock() {
                 for b in message {
@@ -156,34 +156,43 @@ impl FractalConnection {
 
         let mut out_connection = midi_out.connect(midi_out_port, "midir-out").unwrap();
 
-        // send out the supported model codes, listen for the right one
-        for i in 0..0x12 {
-            out_connection.send(&get_firmware_version(i)).unwrap();
-            //println!("sent {}", i);
+        let (mut firmware_major, mut firmware_minor, mut model) = (None, None, None);
+        
+        // detect the model
+        out_connection.send(&wrap_msg(vec![0x7F, 0x00])).unwrap();
+        if let Ok(msg) = r.recv_timeout(Duration::from_millis(500)) {
+            if let Some(msg_model) = msg.model {
+                model = Some(msg_model);
+            }
         }
 
-        //println!("sent!");
+        if model == None {
+            return Err(FrakoError::CompatibleNotDetected);
+        }
 
-        let (mut firmware_major, mut firmware_minor, mut model) = (None, None, None);
+        // detect the firmware
+        out_connection.send(&get_firmware_version(model_code(model.unwrap()))).unwrap();
         if let Ok(msg) = r.recv_timeout(Duration::from_millis(500)) {
-            println!("got {:?}", msg);
             match msg.message {
                 fractal::message::FractalMessage::FirmwareVersion{ major, minor } => {
                     firmware_major = Some(major);
                     firmware_minor = Some(minor);
-                    model = msg.model;
                 },
                 _ => ()
             }
         }
 
-        if firmware_major == None && firmware_minor == None && model == None {
+        if firmware_major == None && firmware_minor == None {
             return Err(FrakoError::CompatibleNotDetected);
         }
 
         out_connection.send(&get_current_preset_name(model.unwrap())).unwrap();
 
-        std::thread::sleep_ms(30000);
+        std::thread::sleep_ms(15000);
+
+        out_connection.send(&disconnect_from_controller(model.unwrap())).unwrap();
+
+        //std::thread::sleep_ms(0);
 
         Ok(FractalConnection {
             input: in_connection,
