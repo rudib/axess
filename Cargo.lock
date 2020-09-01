@@ -141,12 +141,26 @@ dependencies = [
 ]
 
 [[package]]
-name = "frako"
+name = "fractal_core"
 version = "0.1.0"
 dependencies = [
  "bus",
+ "fractal_protocol",
  "midir",
+ "quick-error",
 ]
+
+[[package]]
+name = "fractal_gui"
+version = "0.1.0"
+dependencies = [
+ "fractal_core",
+ "fractal_protocol",
+]
+
+[[package]]
+name = "fractal_protocol"
+version = "0.1.0"
 
 [[package]]
 name = "hermit-abi"
@@ -261,6 +275,12 @@ checksum = "04f5f085b5d71e2188cb8271e5da0161ad52c3f227a661a3c135fdf28e258b12"
 dependencies = [
  "unicode-xid",
 ]
+
+[[package]]
+name = "quick-error"
+version = "2.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3ac73b1112776fc109b2e61909bc46c7e1bf0d7f690ffb1676553acce16d5cda"
 
 [[package]]
 name = "quote"

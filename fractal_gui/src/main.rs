@@ -1,7 +1,8 @@
-mod fractal;
+extern crate fractal_protocol;
+extern crate fractal_core;
 
-extern crate midir;
-extern crate bus;
+//extern crate midir;
+//extern crate bus;
 
 
 use std::io::{stdin, stdout, Write};
@@ -9,11 +10,11 @@ use std::error::Error;
 use std::sync::Mutex;
 use std::{time::Duration, thread};
 
-use midir::{MidiInput, MidiOutput, Ignore, MidiInputPort, MidiOutputPort, MidiInputConnection, MidiOutputConnection};
-use bus::Bus;
+use fractal_core::midir::{MidiInput, MidiOutput, Ignore, MidiInputPort, MidiOutputPort, MidiInputConnection, MidiOutputConnection};
+use fractal_core::bus::Bus;
 
-use fractal::common::*;
-use fractal::model::*;
+use fractal_protocol::common::*;
+use fractal_protocol::model::*;
 
 
 fn main() {
@@ -132,7 +133,7 @@ impl FractalConnection {
 
                         // decode the sysex message
                         if (valid_msg) {
-                            let fractal_msg = fractal::message::parse_message(&buffer);
+                            let fractal_msg = fractal_protocol::message::parse_message(&buffer);
                             bus.broadcast(fractal_msg);
                         }
 
@@ -174,7 +175,7 @@ impl FractalConnection {
         out_connection.send(&get_firmware_version(model_code(model.unwrap()))).unwrap();
         if let Ok(msg) = r.recv_timeout(Duration::from_millis(500)) {
             match msg.message {
-                fractal::message::FractalMessage::FirmwareVersion{ major, minor } => {
+                fractal_protocol::message::FractalMessage::FirmwareVersion{ major, minor } => {
                     firmware_major = Some(major);
                     firmware_minor = Some(minor);
                 },
