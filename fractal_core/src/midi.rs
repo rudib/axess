@@ -15,7 +15,7 @@ impl Midi {
         }
     }
 
-    pub fn detect_midi_channels(&self) -> Result<MidiChannels, FractalCoreError> {
+    pub fn detect_midi_ports(&self) -> Result<MidiPorts, FractalCoreError> {
         let mut midi_in = MidiInput::new(&format!("{} input", self.client_name))?;
         midi_in.ignore(Ignore::None);
         let midi_out = MidiOutput::new(&format!("{} output", self.client_name))?;
@@ -23,20 +23,20 @@ impl Midi {
         let midi_in_ports = midi_in.ports();
         let midi_out_ports = midi_out.ports();
 
-        Ok(MidiChannels {
+        Ok(MidiPorts {
             inputs: midi_in_ports.iter().filter_map(|p| midi_in.port_name(p).ok()).collect(),
             outputs: midi_out_ports.iter().filter_map(|p| midi_out.port_name(p).ok()).collect()
         })
     }
 }
-
-pub struct MidiChannels {
+#[derive(Debug)]
+pub struct MidiPorts {
     pub inputs: Vec<String>,
     pub outputs: Vec<String>
 }
 
 
-impl MidiChannels {
+impl MidiPorts {
     pub fn detect_fractal_devices(&self) -> Vec<MidiConnectionDeviceRequest> {
         // todo: this only works with a single device of one type connected to the MIDI adapter
 
@@ -70,7 +70,7 @@ impl MidiChannels {
         ret
     }
 }
-
+#[derive(Debug)]
 pub struct MidiConnectionDeviceRequest {
     pub input_port_name: String,
     pub output_port_name: String,
