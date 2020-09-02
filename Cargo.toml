@@ -3,5 +3,6 @@
 members = [
 "fractal_core",
 "fractal_protocol",
-"fractal_gui"
+"fractal_gui",
+"fractal_backend"
 ]

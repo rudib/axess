@@ -29,7 +29,7 @@ impl Midi {
         })
     }
 }
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct MidiPorts {
     pub inputs: Vec<String>,
     pub outputs: Vec<String>

@@ -1,5 +1,4 @@
 pub extern crate midir;
-pub extern crate bus;
 
 #[macro_use] extern crate quick_error;
 

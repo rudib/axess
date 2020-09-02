@@ -141,10 +141,17 @@ dependencies = [
 ]
 
 [[package]]
-name = "fractal_core"
+name = "fractal_backend"
 version = "0.1.0"
 dependencies = [
  "bus",
+ "fractal_core",
+]
+
+[[package]]
+name = "fractal_core"
+version = "0.1.0"
+dependencies = [
  "fractal_protocol",
  "midir",
  "quick-error",
@@ -154,8 +161,12 @@ dependencies = [
 name = "fractal_gui"
 version = "0.1.0"
 dependencies = [
+ "bus",
+ "fractal_backend",
  "fractal_core",
  "fractal_protocol",
+ "native-windows-derive",
+ "native-windows-gui",
 ]
 
 [[package]]
@@ -193,6 +204,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "755456fae044e6fa1ebbbd1b3e902ae19e73097ed4ed87bb79934a867c007bc3"
 
 [[package]]
+name = "libm"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7fc7aa29613bd6a620df431842069224d8bc9011086b1db4c0e0cd47fa03ec9a"
+
+[[package]]
 name = "log"
 version = "0.4.11"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -223,6 +240,30 @@ dependencies = [
  "wasm-bindgen",
  "web-sys",
  "winapi",
+]
+
+[[package]]
+name = "native-windows-derive"
+version = "1.0.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c39357a029a532c887fb1596e0f0498613d8dd119549d400569d61c048145ac6"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
+
+[[package]]
+name = "native-windows-gui"
+version = "1.0.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6212fbf8ec1f512dffe75155513c017e1d05b5ecd08e03d3ebf4be07bd9f28b1"
+dependencies = [
+ "bitflags 1.2.1",
+ "lazy_static",
+ "stretch",
+ "winapi",
+ "winapi-build",
 ]
 
 [[package]]
@@ -302,6 +343,16 @@ name = "smallvec"
 version = "1.4.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fbee7696b84bbf3d89a1c2eccff0850e3047ed46bfcd2e92c29a2d074d57e252"
+
+[[package]]
+name = "stretch"
+version = "0.3.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b0dc6d20ce137f302edf90f9cd3d278866fd7fb139efca6f246161222ad6d87"
+dependencies = [
+ "lazy_static",
+ "libm",
+]
 
 [[package]]
 name = "syn"
@@ -416,6 +467,12 @@ dependencies = [
  "winapi-i686-pc-windows-gnu",
  "winapi-x86_64-pc-windows-gnu",
 ]
+
+[[package]]
+name = "winapi-build"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d315eee3b34aca4797b2da6b13ed88266e6d612562a0c46390af8299fc699bc"
 
 [[package]]
 name = "winapi-i686-pc-windows-gnu"
