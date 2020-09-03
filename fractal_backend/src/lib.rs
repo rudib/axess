@@ -1,65 +1,37 @@
-extern crate bus;
+//extern crate bus;
+extern crate broadcaster;
 
 use std::{time::Duration, thread, sync::{Mutex, Arc}};
-use bus::{BusReader, Bus};
+//use bus::{BusReader, Bus};
 use fractal_core::midi::{Midi, MidiPorts};
+use broadcaster::BroadcastChannel;
+use futures::executor::block_on;
 
 #[derive(Debug, Clone)]
-pub struct UiRequest {
-    pub command: UiCommand
-}
-
-impl UiRequest {
-    pub fn new(command: UiCommand) -> Self {
-        UiRequest { command: command }
-    }
-}
-
-#[derive(Debug, Clone)]
-pub enum UiCommand {
+pub enum UiPayload {
     ListMidiPorts,
-    
+    DetectedMidiPorts {
+        ports: MidiPorts
+    },
+
     /// Hard shutdown
     Drop
 }
 
-
-#[derive(Debug, Clone)]
-pub struct UiResponse {
-    pub request: UiRequest,
-    pub payload: UiPayload
-}
-#[derive(Debug, Clone)]
-pub enum UiPayload {
-    DetectedMidiPorts {
-        ports: MidiPorts
-    }
-}
-
-
-/// Runs in its own thread and coordinates all backend communication tasks.
-pub struct UiBackend {
-
-}
-
+#[derive(Clone)]
 pub struct UiApi {
-    pub input: Bus<UiRequest>,
-    output_bus: Arc<Mutex<Bus<UiResponse>>>
-    //pub output: BusReader<UiResponse>
-}
-
-impl UiApi {
-    pub fn new_response_reader(&mut self) -> BusReader<UiResponse> {
-        let mut output_bus = self.output_bus.lock().unwrap();
-        output_bus.add_rx()
-    }
+    pub channel: BroadcastChannel<UiPayload>
 }
 
 impl Drop for UiApi {
     fn drop(&mut self) {
         // kill the thread
-        self.input.broadcast(UiRequest::new(UiCommand::Drop))
+        //self.input.broadcast(UiRequest::new(UiCommand::Drop))
     }
+}
+/// Runs in its own thread and coordinates all backend communication tasks.
+pub struct UiBackend {
+
 }
 
 impl UiBackend {
@@ -69,49 +41,27 @@ impl UiBackend {
         }
     }
     pub fn spawn() -> UiApi {
-        //let ui = UiBackend::new();
-
-        let mut bus_output = Bus::new(16);
-        let mut bus_output = Arc::new(Mutex::new(bus_output));
-
-        let mut bus_input = Bus::new(16);
-        let mut bus_input_rx = bus_input.add_rx();
-        //let bus_output_rx = bus_output.add_rx();
+        let mut chan = BroadcastChannel::new();
 
         let api = UiApi {
-            input: bus_input,
-            output_bus: bus_output.clone()
+            channel: chan.clone()
         };
 
         thread::spawn(move || {
-            let tick = Duration::from_millis(50);
-
             loop {
-                if let Ok(request) = bus_input_rx.recv_timeout(tick) {
-                    // process
-
-                    match request.command {
-                        UiCommand::ListMidiPorts => {
-                            println!("ports you want?");
-
-                            {
-                                let midi = Midi::new();
-                                if let Ok(midi_ports) = midi.detect_midi_ports() {
-                                    bus_output.lock().unwrap().broadcast(UiResponse {
-                                        request: request,
-                                        payload: UiPayload::DetectedMidiPorts {
-                                            ports: midi_ports
-                                        }
-                                    });
-
-                                    println!("replied with ports!");
-                                }
-                            }
-
+                match block_on(chan.recv()) {                    
+                    Some(UiPayload::ListMidiPorts) => {
+                        let midi = Midi::new();
+                        if let Ok(midi_ports) = midi.detect_midi_ports() {
+                            block_on(chan.send(&UiPayload::DetectedMidiPorts {
+                                    ports: midi_ports
+                            })).unwrap();
                         }
-                        UiCommand::Drop => {
-                            break;
-                        }
+                    },
+                    Some(_) => { },
+                    None => {
+                        println!("end of stream!");
+                        break;
                     }
                 }
             }

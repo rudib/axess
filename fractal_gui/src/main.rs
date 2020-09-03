@@ -1,7 +1,6 @@
 extern crate fractal_protocol;
 extern crate fractal_core;
-extern crate bus;
-
+extern crate broadcaster;
 
 extern crate native_windows_gui as nwg;
 extern crate native_windows_derive as nwd;
@@ -10,16 +9,15 @@ use nwd::NwgUi;
 use nwg::NativeUi;
 
 use std::thread;
-use std::{cell::RefCell, sync::{Mutex, Arc}};
+use std::{cell::RefCell};
 
-use fractal_core::midi::*;
-use fractal_backend::{UiApi, UiBackend, UiRequest, UiCommand, UiResponse};
-use bus::BusReader;
+use fractal_backend::{UiApi, UiBackend, UiPayload};
+use futures::executor::block_on;
+//use bus::BusReader;
 
 #[derive(NwgUi)]
 pub struct ConnectWindow {
     #[nwg_control(size: (300, 115), position: (300, 300), title: "Connect to a Fractal Audio device", flags: "WINDOW|VISIBLE")]
-    //#[nwg_events( OnWindowClose: [BasicApp::say_goodbye] )]
     #[nwg_events( OnWindowClose: [ConnectWindow::exit], OnInit: [ConnectWindow::init] )]
     window: nwg::Window,
 
@@ -50,15 +48,14 @@ pub struct ConnectWindow {
     hello_button: nwg::Button
     */
 
-    ui_api: RefCell<UiApi>,
-    ui_api_reader: RefCell<BusReader<UiResponse>>
+    ui_api: RefCell<UiApi>
 }
 
 impl ConnectWindow {
 
     fn init(&self) {
-        println!("heyo?");
-        self.ui_api.borrow_mut().input.broadcast(UiRequest::new(UiCommand::ListMidiPorts));
+        let ref mut ui_api = self.ui_api.borrow_mut();
+        block_on(ui_api.channel.send(&UiPayload::ListMidiPorts)).unwrap();
     }
     
     fn exit(&self) {
@@ -67,54 +64,44 @@ impl ConnectWindow {
 
     fn backend_response(&self) {
         println!("now what?");
+
         // there should be a message waiting for
         // read without locking, apply the UI changes
-        if let Ok(response) = self.ui_api_reader.borrow_mut().try_recv() {
-            match response.payload {
-                fractal_backend::UiPayload::DetectedMidiPorts { ports } => {
-                    
-                    println!("setting ports!");
-                    
-                    let len = ports.inputs.len();                    
-                    if len == 0 {
-                        // notify that none found?
-                        self.midi_input.set_collection(vec!["None found!".to_string()]);
-                        self.midi_input.set_selection(Some(0));
-                        self.midi_input.set_enabled(false);
-                    } else {
-                        self.midi_input.set_enabled(true);
-                        self.midi_input.set_collection(ports.inputs);
-                    }
-
+        
+        let msg = {
+            block_on(self.ui_api.borrow_mut().channel.recv())
+        };
+   
+        match msg {
+            Some(UiPayload::DetectedMidiPorts { ports }) => {
+                
+                println!("setting ports!");
+                
+                let len = ports.inputs.len();                    
+                if len == 0 {
+                    // notify that none found?
+                    self.midi_input.set_collection(vec!["None found!".to_string()]);
+                    self.midi_input.set_selection(Some(0));
+                    self.midi_input.set_enabled(false);
+                } else {
+                    self.midi_input.set_enabled(true);
+                    self.midi_input.set_collection(ports.inputs);
                 }
-            }
+            },
+            Some(_) => {}
+            None => {}
         }
     }
-
-    /*
-    fn say_hello(&self) {
-        nwg::modal_info_message(&self.window, "Hello", &format!("Hello {}", self.name_edit.text()));
-    }
-    
-    fn say_goodbye(&self) {
-        nwg::modal_info_message(&self.window, "Goodbye", &format!("Goodbye {}", self.name_edit.text()));
-        nwg::stop_thread_dispatch();
-    }
-    */
 }
 
 fn main() {
     nwg::init().expect("Failed to init Native Windows GUI");
     nwg::Font::set_global_family("Segoe UI").expect("Failed to set default font");
 
-    let mut backend = UiBackend::spawn();
-    let mut rx_pump = backend.new_response_reader();
-    let rx_ui = backend.new_response_reader();
+    let mut ui_api = UiBackend::spawn();
 
     let connect_window = ConnectWindow {
-        ui_api: RefCell::new(backend),
-        ui_api_reader: RefCell::new(rx_ui),
-
+        ui_api: RefCell::new(ui_api.clone()),
         window: Default::default(),
         grid: Default::default(),
         label_midi_input: Default::default(),
@@ -126,10 +113,10 @@ fn main() {
     
     let notice_sender = app.backend_response_notifier.sender();
     
-    // backend msg notifier pump
+    // backend msg notifier pump    
     thread::spawn(move || {        
         loop {
-            if let Ok(_) = rx_pump.recv() {
+            if let Some(_) = block_on(ui_api.channel.recv()) {
                 notice_sender.notice();
             } else {
                 break;
@@ -141,17 +128,3 @@ fn main() {
 
     nwg::dispatch_thread_events();
 }
-
-
-
-/*
-fn main() {
-    let midi = Midi::new();
-    let midi_ports = midi.detect_midi_ports().unwrap();
-    println!("all midi ports: {:?}", midi_ports);
-    let fractals = midi_ports.detect_fractal_devices();
-    println!("fractals: {:?}", fractals);
-
-
-}
-*/

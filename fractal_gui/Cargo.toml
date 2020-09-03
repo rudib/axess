@@ -14,4 +14,6 @@ fractal_backend = { path = "../fractal_backend/" }
 native-windows-gui = "1.0.4"
 native-windows-derive = "1.0.1"
 
-bus = "2.2.3"
+#bus = "2.2.3"
+broadcaster="1.0"
+futures = "0.3.5"
