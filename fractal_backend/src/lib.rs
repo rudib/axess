@@ -1,8 +1,6 @@
-//extern crate bus;
 extern crate broadcaster;
 
-use std::{time::Duration, thread, sync::{Mutex, Arc}};
-//use bus::{BusReader, Bus};
+use std::{thread};
 use fractal_core::midi::{Midi, MidiPorts};
 use broadcaster::BroadcastChannel;
 use futures::executor::block_on;
@@ -13,7 +11,14 @@ pub enum UiPayload {
     DetectedMidiPorts {
         ports: MidiPorts
     },
+    ConnectToMidiPorts {
+        input_port: String,
+        output_port: String
+    },
 
+    /// Internal
+    Ping,
+    
     /// Hard shutdown
     Drop
 }
@@ -21,13 +26,6 @@ pub enum UiPayload {
 #[derive(Clone)]
 pub struct UiApi {
     pub channel: BroadcastChannel<UiPayload>
-}
-
-impl Drop for UiApi {
-    fn drop(&mut self) {
-        // kill the thread
-        //self.input.broadcast(UiRequest::new(UiCommand::Drop))
-    }
 }
 /// Runs in its own thread and coordinates all backend communication tasks.
 pub struct UiBackend {
@@ -54,11 +52,19 @@ impl UiBackend {
                         let midi = Midi::new();
                         if let Ok(midi_ports) = midi.detect_midi_ports() {
                             block_on(chan.send(&UiPayload::DetectedMidiPorts {
-                                    ports: midi_ports
+                                ports: midi_ports
                             })).unwrap();
                         }
                     },
-                    Some(_) => { },
+                    Some(UiPayload::ConnectToMidiPorts { input_port, output_port }) => {
+                        println!("try to connect to {}, {}", input_port, output_port);
+                    },
+                    Some(UiPayload::Drop) => { 
+                        break;
+                    },
+                    Some(_) => {
+
+                    }
                     None => {
                         println!("end of stream!");
                         break;
