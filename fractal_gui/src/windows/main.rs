@@ -7,6 +7,7 @@ use std::{cell::RefCell};
 use fractal_backend::{UiApi, UiBackend, UiPayload};
 use futures::executor::block_on;
 use super::{common::{FractalWindow, WindowApi}, connect::ConnectWindow};
+use crate::windows::main::main_window_ui::MainWindowUi;
 
 #[derive(NwgUi, Default)]
 pub struct MainWindow {
@@ -61,12 +62,20 @@ pub struct MainWindow {
 }
 
 impl FractalWindow for MainWindow {
+    type Data = ();
+    type WindowUi = MainWindowUi;
+    type Window = MainWindow;
+
     fn set_window_api(&mut self, api: WindowApi) {
         self.ui_api = Some(api);
     }
 
     fn get_window_api(&self) -> &Option<WindowApi> {
         &self.ui_api
+    }
+
+    fn get_notice(&self) -> &nwg::Notice {
+        &self.backend_response_notifier
     }
 }
 
@@ -84,6 +93,7 @@ impl MainWindow {
         println!("connect?");
         //let api = self.ui_api.as_ref().unwrap().borrow_mut().clone();
         //ConnectWindow::spawn(api);
+        self.spawn_child::<ConnectWindow>(());
     }
 
     fn disconnect(&self) {

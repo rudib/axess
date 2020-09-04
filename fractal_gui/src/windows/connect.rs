@@ -6,6 +6,8 @@ use std::{cell::RefCell, sync::{Mutex, Arc}};
 
 use fractal_backend::{UiApi, UiBackend, UiPayload};
 use futures::executor::block_on;
+use super::common::{FractalWindow, WindowApi};
+use crate::windows::connect::connect_window_ui::ConnectWindowUi;
 
 #[derive(NwgUi, Default)]
 pub struct ConnectWindow {
@@ -44,64 +46,38 @@ pub struct ConnectWindow {
     #[nwg_events( OnButtonClick: [ConnectWindow::connect] )]
     connect_button: nwg::Button,
 
-    ui_api: Option<RefCell<UiApi>>
+    ui_api: Option<WindowApi>
 }
 
-impl ConnectWindow {
-
-    pub fn spawn(mut api: UiApi) {
-        thread::spawn(|| {
-            let mut window_data = Self::default();
-            window_data.ui_api = Some(RefCell::new(api.clone()));
-
-            let window = Self::build_ui(window_data).expect("Failed to build UI");
-            let notice_sender = window.backend_response_notifier.sender();
-            
-            let stop = Arc::new(Mutex::new(false));
-
-            // message notifier
-            {
-                let stop = stop.clone();
-                thread::spawn(move || {
-                    loop {
-                        if let Some(_) = block_on(api.channel.recv()) {
-                            notice_sender.notice();
-                        } else {
-                            break;
-                        }
-
-                        if let Ok(stop) = stop.lock() {
-                            if *stop == true {
-                                break;
-                            }
-                        }
-                    }
-                    println!("stop 2");
-                });
-            }
-
-            nwg::dispatch_thread_events();
-            
-            if let Ok(mut stop) = stop.lock() {
-                *stop = true;
-            }
-            block_on(window.ui_api.as_ref().unwrap().borrow_mut().channel.send(&UiPayload::Ping)).unwrap();
-            println!("stop 1");
-        });
+impl FractalWindow for ConnectWindow {
+    type WindowUi = ConnectWindowUi;
+    type Window = ConnectWindow;
+    type Data = ();
+    
+    fn set_window_api(&mut self, api: WindowApi) {
+        self.ui_api = Some(api);
     }
 
-    fn connect(&self) {
-        //println!("connect?");
-        let ref mut ui_api = self.ui_api.as_ref().unwrap().borrow_mut();
-        block_on(ui_api.channel.send(&UiPayload::ConnectToMidiPorts {
+    fn get_window_api(&self) -> &Option<WindowApi> {
+        &self.ui_api
+    }
+
+    fn get_notice(&self) -> &nwg::Notice {
+        &self.backend_response_notifier
+    }
+}
+
+
+impl ConnectWindow {
+    fn connect(&self) {        
+        self.send(UiPayload::ConnectToMidiPorts {
             input_port: self.midi_input.selection_string().unwrap(),
             output_port: self.midi_output.selection_string().unwrap()
-        })).unwrap();
+        })
     }
 
     fn init(&self) {
-        let ref mut ui_api = self.ui_api.as_ref().unwrap().borrow_mut();
-        block_on(ui_api.channel.send(&UiPayload::ListMidiPorts)).unwrap();
+        self.send(UiPayload::ListMidiPorts)
     }
     
     fn exit(&self) {
@@ -112,11 +88,8 @@ impl ConnectWindow {
         println!("now what?");
 
         // there should be a message waiting for
-        // read without locking, apply the UI changes
-        
-        let msg = {
-            block_on(self.ui_api.as_ref().unwrap().borrow_mut().channel.recv())
-        };
+        // read without locking, apply the UI changes        
+        let msg = self.recv();
    
         match msg {
             Some(UiPayload::DetectedMidiPorts { ports }) => {
