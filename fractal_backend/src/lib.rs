@@ -8,47 +8,10 @@ use futures::executor::block_on;
 use log::{error, trace};
 use fractal_protocol::{message2::validate_and_decode_message, common::{get_firmware_version, wrap_msg}, message::{FractalMessage, FractalMessageWrapper}, model::{FractalDevice, model_code}};
 use utils::{channel_map_and_filter_first_async, block_on_with_timeout};
+use payload::{PayloadConnection, UiPayload, ConnectToMidiPorts};
 
-mod utils;
-
-#[derive(Debug, Clone)]
-pub enum UiPayload {
-    Connection(PayloadConnection),
-    
-    /// Internal
-    Ping,
-    
-    /// Hard shutdown
-    Drop
-}
-
-#[derive(Debug, Clone)]
-pub enum PayloadConnection {
-    ListMidiPorts,
-    DetectedMidiPorts {
-        ports: MidiPorts
-    },
-    ConnectToMidiPorts(ConnectToMidiPorts),
-
-    TryToAutoConnect,
-    AutoConnectDeviceNotFound,
-
-    Disconnect,
-    
-    // Events
-    ConnectionFailed(FractalCoreError),
-    Connected {
-        device: fractal_protocol::model::FractalDevice
-    },
-    Disconnected    
-}
-
-#[derive(Debug, Clone)]
-pub struct ConnectToMidiPorts {
-    pub input_port: String,
-    pub output_port: String
-}
-
+pub mod utils;
+pub mod payload;
 
 #[derive(Clone)]
 pub struct UiApi {
