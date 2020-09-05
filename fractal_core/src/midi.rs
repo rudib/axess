@@ -1,6 +1,6 @@
 use super::FractalCoreError;
 
-use ::fractal_protocol::{common::wrap_msg, model::FractalModel};
+use ::fractal_protocol::{common::wrap_msg, model::{FractalDevice, FractalModel}};
 
 use midir::{MidiInput, MidiOutput, Ignore, MidiInputPort, MidiOutputPort, MidiInputConnection, MidiOutputConnection};
 use log::{trace};
@@ -63,17 +63,6 @@ impl Midi {
 
                 trace!("MIDI connection initialized");
 
-                // detect the model
-                //out_connection.send(&wrap_msg(vec![0x7F, 0x00])).unwrap();
-
-                /*
-                if let Ok(msg) = r.recv_timeout(Duration::from_millis(500)) {
-                    if let Some(msg_model) = msg.model {
-                        model = Some(msg_model);
-                    }
-                }
-                */
-
                 return Ok(MidiConnection {
                     input: in_connection,
                     output: out_connection
@@ -119,7 +108,7 @@ impl MidiPorts {
                     ret.push(MidiConnectionDeviceRequest {
                         input_port_name: input_port.into(),
                         output_port_name: output_port.into(),
-                        fractal_model: *model
+                        fractal_model: Some(*model)
                     })
                 },
                 _ => ()
@@ -133,7 +122,7 @@ impl MidiPorts {
 pub struct MidiConnectionDeviceRequest {
     pub input_port_name: String,
     pub output_port_name: String,
-    pub fractal_model: FractalModel
+    pub fractal_model: Option<FractalModel>
 }
 
 pub struct MidiConnection<T: 'static> {

@@ -96,7 +96,7 @@ impl MainWindow {
                 //self.spawn_child::<ConnectWindow>(());
             },
             Some(UiPayload::Connection(PayloadConnection::Connected { ref device })) => {
-                self.status_bar.set_text(0, &format!("Connected to {:?}", device));
+                self.status_bar.set_text(0, &format!("Connected to {}.", device));
                 self.menu_device_connect.set_enabled(false);
                 self.menu_device_disconnect.set_enabled(true);                
             },

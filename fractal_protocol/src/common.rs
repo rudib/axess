@@ -68,7 +68,8 @@ pub fn wrap_msg(msg: MidiMessage) -> MidiMessage {
 }
 
 pub fn get_current_preset_name(model: FractalModel) -> MidiMessage {
-    if model == FractalModel::III {
+    // todo: test
+    if model == FractalModel::III || model == FractalModel::FM3 {
         wrap_msg(vec![model_code(model), 0x0D, 0x7F, 0x7F])
     } else {
         wrap_msg(vec![model_code(model), 0x0F])

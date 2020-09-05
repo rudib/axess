@@ -6,7 +6,7 @@ use fractal_core::{FractalCoreError, midi::{Midi, MidiPorts, MidiConnection}};
 use broadcaster::BroadcastChannel;
 use futures::executor::block_on;
 use log::{error, trace};
-use fractal_protocol::{message2::validate_and_decode_message, common::{get_firmware_version, wrap_msg}, message::{FractalMessage, FractalMessageWrapper}, model::{FractalDevice, model_code}};
+use fractal_protocol::{message2::validate_and_decode_message, common::{get_firmware_version, wrap_msg, get_current_preset_name}, message::{FractalMessage, FractalMessageWrapper}, model::{FractalDevice, model_code}};
 use utils::{channel_map_and_filter_first_async, block_on_with_timeout};
 use payload::{PayloadConnection, UiPayload, ConnectToMidiPorts};
 
@@ -22,12 +22,13 @@ pub struct UiBackend {
     channel: BroadcastChannel<UiPayload>,
     midi: Midi,
     midi_connection: Option<MidiConnection<BroadcastChannel<FractalMessageWrapper>>>,
+    device: Option<FractalDevice>,
     midi_messages: BroadcastChannel<FractalMessageWrapper>
 }
 
 impl UiBackend {    
     pub fn spawn() -> UiApi {
-        let mut chan = BroadcastChannel::new();
+        let chan = BroadcastChannel::new();
 
         let api = UiApi {
             channel: chan.clone()
@@ -37,7 +38,8 @@ impl UiBackend {
             channel: chan,
             midi: Midi::new().unwrap(),
             midi_connection: None,
-            midi_messages: BroadcastChannel::new()
+            midi_messages: BroadcastChannel::new(),
+            device: None
         };
 
         thread::Builder::new().name("Backend".into()).spawn(move || {
@@ -81,18 +83,21 @@ impl UiBackend {
                 self.send(UiPayload::Connection(PayloadConnection::DetectedMidiPorts {
                     ports: midi_ports
                 }));
-            }
-            //PayloadConnection::DetectedMidiPorts { ports } => {}
+            },
+
             PayloadConnection::ConnectToMidiPorts(ref ports) => {
                 match self.connect(ports) {
                     Ok(device) => {
+                        self.device = Some(device.clone());
                         self.send(UiPayload::Connection(PayloadConnection::Connected { device: device }));
+                        self.on_connect();
                     },
                     Err(e) => {
                         self.send(UiPayload::Connection(PayloadConnection::ConnectionFailed(e)))
                     }
                 }
-            }
+            },
+
             PayloadConnection::TryToAutoConnect => {
                 let midi_ports = self.midi.detect_midi_ports().unwrap();
                 let fractal_devices = midi_ports.detect_fractal_devices();
@@ -108,15 +113,15 @@ impl UiBackend {
                 } else {
                     self.send(UiPayload::Connection(PayloadConnection::AutoConnectDeviceNotFound));
                 }
-            }
-            //PayloadConnection::AutoConnectResult(_) => {}
-            //PayloadConnection::Connected => {}
-            //PayloadConnection::Disconnected => {}
-
+            },
+            
             PayloadConnection::Disconnect => {
                 // todo: maybe send the message that we're going away? clear the broadcast?
+                // disconnect_from_controller
                 self.midi_connection = None;
+                self.device = None;
                 self.send(UiPayload::Connection(PayloadConnection::Disconnected));
+                self.on_disconnect();
 
             },
 
@@ -124,9 +129,24 @@ impl UiBackend {
         }
     }
 
+    fn on_connect(&mut self) {
+        match (&mut self.midi_connection, &self.device) {
+            (Some(ref mut midi), Some(ref device)) => {
+                midi.output.send(&get_current_preset_name(device.model));
+            },
+            _ => {}
+        }
+        
+        trace!("start the poller!");
+    }
+
+    fn on_disconnect(&mut self) {
+        trace!("stop the poller!");
+    }
+
     fn midi_message_callback(msg: &[u8], ctx: &mut BroadcastChannel<FractalMessageWrapper>) {
         if let Some(msg) = validate_and_decode_message(msg) {
-            trace!("Fractal message: {:?}", msg);
+            trace!("Raw MIDI message: {:?}", msg);
             block_on(ctx.send(&msg)).unwrap();
         }
     }
@@ -173,7 +193,7 @@ impl UiBackend {
         let device = FractalDevice {
             firmware: firmware,
             model: model
-        };        
+        };
         Ok(device)
     }
 }

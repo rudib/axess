@@ -68,14 +68,21 @@ pub fn parse_message(msg: &[u8]) -> FractalMessageWrapper {
 
     let function_id = msg.get(5);
 
-    let content = match (model, function_id) {
+
+    enum ModelGroup { Three, Legacy };
+    let model_group = match model {
+        Some(FractalModel::III) | Some(FractalModel::FM3) => ModelGroup::Three,
+        _ => ModelGroup::Legacy
+    };
+
+    let content = match (model_group, function_id) {
         /*
         (Some(FractalModel::III), Some(0x13)) => {
             parse_status_dump(msg.into_iter().skip(6).collect())
         }
         */
         //(Some(FractalModel::III), Some(0x0F)) => parse_looper_state(msg.iter().nth(6).unwrap()),
-        (Some(FractalModel::III), Some(0x14)) => FractalMessage::CurrentTempo(decode_effect_id(
+        (ModelGroup::Three, Some(0x14)) => FractalMessage::CurrentTempo(decode_effect_id(
             msg.iter().nth(6).unwrap(),
             msg.iter().nth(7).unwrap(),
         )),
@@ -89,7 +96,7 @@ pub fn parse_message(msg: &[u8]) -> FractalMessageWrapper {
             major: *msg.iter().nth(6).unwrap() as u8,
             minor: *msg.iter().nth(7).unwrap() as u8,
         },
-        (Some(FractalModel::III), Some(0x0D)) => FractalMessage::PresetName(
+        (ModelGroup::Three, Some(0x0D)) => FractalMessage::PresetName(
             decode_effect_id(msg.iter().nth(6).unwrap(), msg.iter().nth(7).unwrap()),
             decode_preset_name(&msg[8..]),
         ),
@@ -108,7 +115,7 @@ pub fn parse_message(msg: &[u8]) -> FractalMessageWrapper {
             string_number: *msg.iter().nth(7).unwrap() as u8,
             tuner_data: *msg.iter().nth(8).unwrap() as u8,
         },
-        (Some(FractalModel::III), Some(0x0E)) => FractalMessage::SceneName(
+        (ModelGroup::Three, Some(0x0E)) => FractalMessage::SceneName(
             *msg.iter().nth(6).unwrap(),
             decode_preset_name(&msg[7..]),
         ),
@@ -125,7 +132,7 @@ pub fn parse_message(msg: &[u8]) -> FractalMessageWrapper {
         (_, Some(0x29)) => {
             FractalMessage::CurrentSceneNumber(1 + *msg.iter().nth(6).unwrap() as u8)
         }
-        (Some(FractalModel::III), Some(0x0C)) => {
+        (ModelGroup::Three, Some(0x0C)) => {
             FractalMessage::CurrentSceneNumber(*msg.iter().nth(6).unwrap() as u8)
         }
         (_, Some(0x64)) => FractalMessage::MultipurposeResponse {
