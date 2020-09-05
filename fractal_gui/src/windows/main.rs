@@ -90,9 +90,9 @@ impl MainWindow {
 
     fn connect(&self) {
         // open the window?
-        println!("connect?");
-        //let api = self.ui_api.as_ref().unwrap().borrow_mut().clone();
-        //ConnectWindow::spawn(api);
+        
+        // todo: check if we can auto connect, without a window
+
         self.spawn_child::<ConnectWindow>(());
     }
 

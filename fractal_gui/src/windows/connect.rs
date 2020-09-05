@@ -4,7 +4,7 @@ use nwg::{ComboBox, NativeUi};
 use std::thread;
 use std::{cell::RefCell, sync::{Mutex, Arc}};
 
-use fractal_backend::{UiApi, UiBackend, UiPayload};
+use fractal_backend::{UiApi, UiBackend, UiPayload, PayloadConnection};
 use futures::executor::block_on;
 use super::common::{FractalWindow, WindowApi};
 use crate::windows::connect::connect_window_ui::ConnectWindowUi;
@@ -70,14 +70,14 @@ impl FractalWindow for ConnectWindow {
 
 impl ConnectWindow {
     fn connect(&self) {        
-        self.send(UiPayload::ConnectToMidiPorts {
+        self.send(UiPayload::Connection(PayloadConnection::ConnectToMidiPorts {
             input_port: self.midi_input.selection_string().unwrap(),
             output_port: self.midi_output.selection_string().unwrap()
-        })
+        }))
     }
 
     fn init(&self) {
-        self.send(UiPayload::ListMidiPorts)
+        self.send(UiPayload::Connection(PayloadConnection::ListMidiPorts))
     }
     
     fn exit(&self) {
@@ -85,14 +85,12 @@ impl ConnectWindow {
     }
 
     fn backend_response(&self) {
-        println!("now what?");
-
         // there should be a message waiting for
         // read without locking, apply the UI changes        
         let msg = self.recv();
    
         match msg {
-            Some(UiPayload::DetectedMidiPorts { ports }) => {
+            Some(UiPayload::Connection(PayloadConnection::DetectedMidiPorts { ports })) => {
                 
                 let set_ports = |dropdown: &ComboBox<String>, ports: &Vec<String>| {
                     let len = ports.len();
