@@ -3,6 +3,7 @@ use super::FractalCoreError;
 use ::fractal_protocol::model::FractalModel;
 
 use midir::{MidiInput, MidiOutput, Ignore, MidiInputPort, MidiOutputPort, MidiInputConnection, MidiOutputConnection};
+use log::{trace};
 
 pub struct Midi {
     client_name: String
@@ -23,10 +24,14 @@ impl Midi {
         let midi_in_ports = midi_in.ports();
         let midi_out_ports = midi_out.ports();
 
-        Ok(MidiPorts {
+        let ports = MidiPorts {
             inputs: midi_in_ports.iter().filter_map(|p| midi_in.port_name(p).ok()).collect(),
             outputs: midi_out_ports.iter().filter_map(|p| midi_out.port_name(p).ok()).collect()
-        })
+        };
+
+        trace!("Detected MIDI ports: {:?}", ports);
+
+        Ok(ports)
     }
 }
 #[derive(Debug, Clone)]

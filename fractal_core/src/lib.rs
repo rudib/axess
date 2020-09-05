@@ -1,5 +1,5 @@
-pub extern crate midir;
-
+extern crate midir;
+extern crate log;
 #[macro_use] extern crate quick_error;
 
 pub mod midi;

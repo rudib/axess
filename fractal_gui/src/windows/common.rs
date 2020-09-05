@@ -28,7 +28,7 @@ pub trait FractalWindow {
         self.get_window_api().as_ref().expect("should be initialized")
     }
 
-    fn spawn(data: Self::Data, api: WindowApi) {
+    fn spawn(data: Self::Data, api: WindowApi) -> std::result::Result<std::thread::JoinHandle<()>, std::io::Error> {
         thread::Builder::new()
             .name(format!("{} Main Thread", type_name::<Self::Window>()))
             .spawn(move || {
@@ -75,12 +75,12 @@ pub trait FractalWindow {
             
             // todo: this is api #3 with a queue... somehow get only the sender?
             block_on(api.api.borrow().channel.send(&UiPayload::Ping)).unwrap();
-        }).unwrap();
+        })
     }
 
     fn spawn_child<T: FractalWindow>(&self, data: T::Data) {
         let api = self.get_window_api_initialized().clone();
-        T::spawn(data, api)
+        T::spawn(data, api).unwrap();
     } 
 }
 #[derive(Clone)]

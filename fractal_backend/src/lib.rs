@@ -4,6 +4,7 @@ use std::{thread};
 use fractal_core::midi::{Midi, MidiPorts};
 use broadcaster::BroadcastChannel;
 use futures::executor::block_on;
+use log::trace;
 
 #[derive(Debug, Clone)]
 pub enum UiPayload {
@@ -59,8 +60,14 @@ impl UiBackend {
         };
 
         thread::Builder::new().name("Backend".into()).spawn(move || {
+            trace!("Backend initialized");
             loop {
-                match block_on(backend.channel.recv()) {  
+                let msg = block_on(backend.channel.recv());
+                if let Some(ref msg) = msg {
+                    trace!("Backend message received: {:?}", msg);
+                }
+
+                match msg {  
 
                     Some(UiPayload::Connection(c)) => {
                         backend.connection(c);
@@ -75,14 +82,15 @@ impl UiBackend {
                 }
             }
 
-            println!("shutting down");
+            trace!("Backend shutting down");
         }).unwrap();
 
         api
     }
 
-    fn send(&self, msg: UiPayload) {
+    fn send(&self, msg: UiPayload) {        
         block_on(self.channel.send(&msg)).unwrap();
+        trace!("Backend sent message: {:?}", msg);
     }
 
     fn connection(&self, msg: PayloadConnection) {
@@ -97,7 +105,13 @@ impl UiBackend {
             }
             //PayloadConnection::DetectedMidiPorts { ports } => {}
             PayloadConnection::ConnectToMidiPorts { input_port, output_port } => {}
-            PayloadConnection::TryToAutoConnect => {}
+            PayloadConnection::TryToAutoConnect => {
+
+                // detect stuff?
+
+                self.send(UiPayload::Connection(PayloadConnection::AutoConnectResult(false)));
+
+            }
             //PayloadConnection::AutoConnectResult(_) => {}
             //PayloadConnection::Connected => {}
             //PayloadConnection::Disconnected => {}

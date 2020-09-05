@@ -9,6 +9,7 @@ edition = "2018"
 [dependencies]
 #bus = "2.2.3"
 broadcaster="1.0"
-futures = "0.3.5"
+futures = "0.3"
+log = "0.4"
 
 fractal_core = { path = "../fractal_core/" }

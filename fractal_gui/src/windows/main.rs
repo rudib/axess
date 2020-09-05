@@ -4,7 +4,7 @@ use nwg::NativeUi;
 use std::thread;
 use std::{cell::RefCell};
 
-use fractal_backend::{UiApi, UiBackend, UiPayload};
+use fractal_backend::{UiApi, UiBackend, UiPayload, PayloadConnection};
 use futures::executor::block_on;
 use super::{common::{FractalWindow, WindowApi}, connect::ConnectWindow};
 use crate::windows::main::main_window_ui::MainWindowUi;
@@ -93,7 +93,9 @@ impl MainWindow {
         
         // todo: check if we can auto connect, without a window
 
-        self.spawn_child::<ConnectWindow>(());
+        self.send(UiPayload::Connection(PayloadConnection::TryToAutoConnect));
+
+        //self.spawn_child::<ConnectWindow>(());
     }
 
     fn disconnect(&self) {
@@ -101,6 +103,15 @@ impl MainWindow {
     }
 
     fn backend_response(&self) {
-
+        match self.recv() {
+            Some(UiPayload::Connection(PayloadConnection::AutoConnectResult(found))) => {
+                if found == false {
+                    // start the connect window
+                    self.spawn_child::<ConnectWindow>(());
+                }
+            },
+            Some(_) => {},
+            None => {}
+        }
     }
 }

@@ -11,9 +11,11 @@ fractal_protocol = { path = "../fractal_protocol/" }
 fractal_core = { path = "../fractal_core/" }
 fractal_backend = { path = "../fractal_backend/" }
 
-native-windows-gui = "1.0.4"
-native-windows-derive = "1.0.1"
+native-windows-gui = "1.0"
+native-windows-derive = "1.0"
 
 #bus = "2.2.3"
 broadcaster="1.0"
-futures = "0.3.5"
+futures = "0.3"
+log = "0.4"
+log4rs = "0.13"
