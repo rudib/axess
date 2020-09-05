@@ -82,6 +82,10 @@ pub trait FractalWindow {
         let api = self.get_window_api_initialized().clone();
         T::spawn(data, api).unwrap();
     } 
+
+    fn on_exit(&self) {
+        nwg::stop_thread_dispatch();
+    }
 }
 #[derive(Clone)]
 pub struct WindowApi {

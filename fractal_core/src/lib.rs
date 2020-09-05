@@ -5,11 +5,25 @@ extern crate log;
 pub mod midi;
 
 quick_error! {
-    #[derive(Debug)]
+    #[derive(Debug, Clone)]
     pub enum FractalCoreError {
+        Timeout {}
         Unknown {}
+        MissingValue(val: String) { }
         MidirInit(err: midir::InitError) { from() }
-        MidirConnectInput(err: midir::ConnectError<midir::MidiInput>) { from() }
-        MidirConnectOutput(err: midir::ConnectError<midir::MidiOutput>) { from() }
+        MidirConnectError { }
+        MidirSendError(err: midir::SendError) { from() }
+    }
+}
+
+impl From<midir::ConnectError<midir::MidiInput>> for FractalCoreError {
+    fn from(_: midir::ConnectError<midir::MidiInput>) -> Self {
+        FractalCoreError::MidirConnectError
+    }
+}
+
+impl From<midir::ConnectError<midir::MidiOutput>> for FractalCoreError {
+    fn from(_: midir::ConnectError<midir::MidiOutput>) -> Self {
+        FractalCoreError::MidirConnectError
     }
 }

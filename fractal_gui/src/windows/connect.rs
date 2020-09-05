@@ -1,18 +1,16 @@
 use nwd::NwgUi;
 use nwg::{ComboBox, NativeUi};
 
-use std::thread;
 use std::{cell::RefCell, sync::{Mutex, Arc}};
 
-use fractal_backend::{UiApi, UiBackend, UiPayload, PayloadConnection};
-use futures::executor::block_on;
+use fractal_backend::{UiApi, UiBackend, UiPayload, PayloadConnection, ConnectToMidiPorts};
 use super::common::{FractalWindow, WindowApi};
 use crate::windows::connect::connect_window_ui::ConnectWindowUi;
 
 #[derive(NwgUi, Default)]
 pub struct ConnectWindow {
     #[nwg_control(size: (300, 250), title: "Connect to a Fractal Audio device", flags: "WINDOW|VISIBLE")]
-    #[nwg_events( OnWindowClose: [ConnectWindow::exit], OnInit: [ConnectWindow::init] )]
+    #[nwg_events(OnWindowClose: [ConnectWindow::on_exit], OnInit: [ConnectWindow::init] )]
     window: nwg::Window,
 
     #[nwg_control]
@@ -70,20 +68,16 @@ impl FractalWindow for ConnectWindow {
 
 impl ConnectWindow {
     fn connect(&self) {        
-        self.send(UiPayload::Connection(PayloadConnection::ConnectToMidiPorts {
+        self.send(UiPayload::Connection(PayloadConnection::ConnectToMidiPorts(ConnectToMidiPorts {
             input_port: self.midi_input.selection_string().unwrap(),
             output_port: self.midi_output.selection_string().unwrap()
-        }))
+        })))
     }
 
     fn init(&self) {
         self.send(UiPayload::Connection(PayloadConnection::ListMidiPorts))
     }
     
-    fn exit(&self) {
-        nwg::stop_thread_dispatch();
-    }
-
     fn backend_response(&self) {
         // there should be a message waiting for
         // read without locking, apply the UI changes        
@@ -96,7 +90,7 @@ impl ConnectWindow {
                     let len = ports.len();
                     if len == 0 {
                         dropdown.set_collection(vec!["None found!".to_string()]);
-                        dropdown.set_selection(Some(0));
+                        //dropdown.set_selection(Some(0));
                         dropdown.set_enabled(false);
                     } else {
                         dropdown.set_enabled(true);
@@ -108,7 +102,16 @@ impl ConnectWindow {
                 set_ports(&self.midi_input, &ports.inputs);
                 set_ports(&self.midi_output, &ports.outputs);
 
+                let detected = ports.detect_fractal_devices();
+                if let Some(device ) = detected.first() {
+                    self.midi_input.set_selection_string(&device.input_port_name);
+                    self.midi_output.set_selection_string(&device.output_port_name);
+                }
+
             },
+            Some(UiPayload::Connection(PayloadConnection::Connected { .. })) => {
+                self.on_exit();
+            }
             Some(_) => {}
             None => {}
         }

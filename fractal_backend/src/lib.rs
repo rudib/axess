@@ -2,12 +2,12 @@ extern crate broadcaster;
 extern crate fractal_protocol;
 
 use std::{thread, time::Duration};
-use fractal_core::midi::{Midi, MidiPorts, MidiConnection};
+use fractal_core::{FractalCoreError, midi::{Midi, MidiPorts, MidiConnection}};
 use broadcaster::BroadcastChannel;
 use futures::executor::block_on;
 use log::{error, trace};
 use fractal_protocol::{message2::validate_and_decode_message, common::{get_firmware_version, wrap_msg}, message::{FractalMessage, FractalMessageWrapper}, model::{FractalDevice, model_code}};
-use utils::channel_map_and_filter_first;
+use utils::{channel_map_and_filter_first_async, block_on_with_timeout};
 
 mod utils;
 
@@ -28,20 +28,25 @@ pub enum PayloadConnection {
     DetectedMidiPorts {
         ports: MidiPorts
     },
-    ConnectToMidiPorts {
-        input_port: String,
-        output_port: String
-    },
+    ConnectToMidiPorts(ConnectToMidiPorts),
 
     TryToAutoConnect,
     AutoConnectDeviceNotFound,
+
+    Disconnect,
     
     // Events
-    ConnectionFailed,
+    ConnectionFailed(FractalCoreError),
     Connected {
         device: fractal_protocol::model::FractalDevice
     },
     Disconnected    
+}
+
+#[derive(Debug, Clone)]
+pub struct ConnectToMidiPorts {
+    pub input_port: String,
+    pub output_port: String
 }
 
 
@@ -115,63 +120,13 @@ impl UiBackend {
                 }));
             }
             //PayloadConnection::DetectedMidiPorts { ports } => {}
-            PayloadConnection::ConnectToMidiPorts { input_port, output_port } => {
-                
-                match self.midi.connect_to(&input_port, &output_port, UiBackend::midi_message_callback, self.midi_messages.clone()) {
-                    Ok(mut connection) => {                        
-                        // MIDI connection initialized, do a sanity check
-                        if connection.output.send(&wrap_msg(vec![0x7F, 0x00])).is_ok() {
-
-                            // have we received something?
-                            let model = channel_map_and_filter_first(&mut self.midi_messages, |msg| {
-                                match msg.message {
-                                    FractalMessage::MultipurposeResponse { function_id, response_code} 
-                                        if function_id == 0 && response_code == 0 => 
-                                    {
-                                        msg.model
-                                    },
-                                    _ => None
-                                }
-                            });
-
-                            if let Some(model) = model {
-                                trace!("Detected model {:?}", model);
-                            }
-
-                            // request firmware version
-                            connection.output.send(&get_firmware_version(model_code(model.unwrap()))).unwrap();
-
-                            let firmware = channel_map_and_filter_first(&mut self.midi_messages, |msg| {
-                                match msg.message {
-                                    FractalMessage::FirmwareVersion { major, minor } => {
-                                        Some((major, minor))
-                                    },
-                                    _ => None
-                                }
-                            });
-
-                            match (model, firmware) {
-                                (Some(model), Some(firmware)) => {
-                                    self.midi_connection = Some(connection);
-                                    let device = FractalDevice {
-                                        firmware: firmware,
-                                        model: model
-                                    };
-                                    self.send(UiPayload::Connection(PayloadConnection::Connected { device }));
-                                },
-                                _ => {
-                                    trace!("no go");
-                                }
-                            }
-
-                        } else {
-                            trace!("failed 2");
-                            self.send(UiPayload::Connection(PayloadConnection::ConnectionFailed));
-                        }
+            PayloadConnection::ConnectToMidiPorts(ref ports) => {
+                match self.connect(ports) {
+                    Ok(device) => {
+                        self.send(UiPayload::Connection(PayloadConnection::Connected { device: device }));
                     },
                     Err(e) => {
-                        error!("Failed to connect: {:?}", e);
-                        self.send(UiPayload::Connection(PayloadConnection::ConnectionFailed));
+                        self.send(UiPayload::Connection(PayloadConnection::ConnectionFailed(e)))
                     }
                 }
             }
@@ -183,10 +138,10 @@ impl UiBackend {
                 if fractal_devices.len() == 1 {
                     trace!("Found a single device. Will try to connect.");
                     let fractal_device = fractal_devices.first().unwrap();
-                    self.send(UiPayload::Connection(PayloadConnection::ConnectToMidiPorts {
+                    self.send(UiPayload::Connection(PayloadConnection::ConnectToMidiPorts(ConnectToMidiPorts {
                         input_port: fractal_device.input_port_name.clone(),
                         output_port: fractal_device.output_port_name.clone()                  
-                    }));
+                    })));
                 } else {
                     self.send(UiPayload::Connection(PayloadConnection::AutoConnectDeviceNotFound));
                 }
@@ -194,6 +149,14 @@ impl UiBackend {
             //PayloadConnection::AutoConnectResult(_) => {}
             //PayloadConnection::Connected => {}
             //PayloadConnection::Disconnected => {}
+
+            PayloadConnection::Disconnect => {
+                // todo: maybe send the message that we're going away? clear the broadcast?
+                self.midi_connection = None;
+                self.send(UiPayload::Connection(PayloadConnection::Disconnected));
+
+            },
+
             _ => {}
         }
     }
@@ -203,5 +166,51 @@ impl UiBackend {
             trace!("Fractal message: {:?}", msg);
             block_on(ctx.send(&msg)).unwrap();
         }
+    }
+
+    fn connect(&mut self, ports: &ConnectToMidiPorts) -> Result<FractalDevice, FractalCoreError> {
+
+        let mut connection = self.midi.connect_to(&ports.input_port, &ports.output_port,
+            UiBackend::midi_message_callback, self.midi_messages.clone())?;
+
+        // send a message that should reply to us with the model
+        connection.output.send(&wrap_msg(vec![0x7F, 0x00]))?;
+
+        // retrieve the model
+        let model = channel_map_and_filter_first_async(&mut self.midi_messages, |msg| {
+            match msg.message {
+                FractalMessage::MultipurposeResponse { function_id, response_code} 
+                    if function_id == 0 && response_code == 0 => 
+                {
+                    msg.model
+                },
+                _ => None
+            }
+        });
+        let model = block_on_with_timeout(model, Duration::from_millis(100))?;
+        let model = model.ok_or(FractalCoreError::MissingValue("Model".into()))?;
+        trace!("Detected Fractal Model {:?}", model);
+
+        // request the firmware version
+        connection.output.send(&get_firmware_version(model_code(model)))?;
+
+        let firmware = channel_map_and_filter_first_async(&mut self.midi_messages, |msg| {
+            match msg.message {
+                FractalMessage::FirmwareVersion { major, minor } => {
+                    Some((major, minor))
+                },
+                _ => None
+            }
+        });
+        let firmware = block_on_with_timeout(firmware, Duration::from_millis(100))?;
+        let firmware = firmware.ok_or(FractalCoreError::MissingValue("Firmware".into()))?;
+        trace!("Detected firmware {:?}", firmware);
+
+        self.midi_connection = Some(connection);
+        let device = FractalDevice {
+            firmware: firmware,
+            model: model
+        };        
+        Ok(device)
     }
 }
