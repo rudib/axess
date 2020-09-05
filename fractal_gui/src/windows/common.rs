@@ -1,4 +1,4 @@
-use std::{thread, cell::RefCell, sync::{Mutex, Arc}, ops::Deref};
+use std::{thread, cell::RefCell, sync::{Mutex, Arc}, ops::Deref, any::type_name};
 use fractal_backend::{UiPayload, UiApi};
 use futures::executor::block_on;
 use nwg::{NwgError, NativeUi};
@@ -14,27 +14,27 @@ pub trait FractalWindow {
 
     fn send(&self, payload: UiPayload) {
         let window_api = self.get_window_api_initialized();
-        let api = window_api.api.lock().unwrap();
+        let api = window_api.api.borrow();
         block_on(api.channel.send(&payload)).unwrap();
     }
 
-    fn recv(&self) -> Option<UiPayload> {
+    fn recv(&self) -> Option<UiPayload> {        
         let window_api = self.get_window_api_initialized();
-        block_on(window_api.api.lock().unwrap().channel.recv())
+        let mut api = window_api.api.borrow_mut();
+        block_on(api.channel.recv())
     }
 
     fn get_window_api_initialized(&self) -> &WindowApi {
         self.get_window_api().as_ref().expect("should be initialized")
     }
 
-    //fn build_window(data: Self) -> Result<Self::WindowUi, NwgError>;
-
     fn spawn(data: Self::Data, api: WindowApi) {
-        thread::spawn(move || {
+        thread::Builder::new()
+            .name(format!("{} Main Thread", type_name::<Self::Window>()))
+            .spawn(move || {
             let mut window_data = Self::Window::default();
             window_data.set_window_api(api.clone());
-
-            //let window = Self::build_ui(window_data).expect("Failed to build UI");
+            
             let window = Self::Window::build_ui(window_data).expect("Failed to build UI");
             let notice_sender = window.deref().get_notice().sender();
             
@@ -44,24 +44,18 @@ pub trait FractalWindow {
             {
                 let api = api.clone();
                 let stop = stop.clone();
-                thread::spawn(move || {
-                    println!("s1");    
+                thread::Builder::new()
+                    .name(format!("{} Message Pump", type_name::<Self::Window>()))
+                    .spawn(move || {
                     loop {
-                        println!("s2");
-                        //let msg = block_on(api.channel.recv());
+                        // todo: replace "stop" with a multi-select
+                        let msg = block_on(api.api.borrow_mut().channel.recv());
 
-                        if let Ok(ref mut api) = api.api.lock() {
-                            println!("s3");
-                            let msg = block_on(api.channel.recv());
-                            if let Some(_) = msg {
-                                println!("got msg?");
-                                notice_sender.notice();
-                            } else {
-                                break;
-                            }
+                        if let Some(_) = msg {
+                            notice_sender.notice();
+                        } else {
+                            break;
                         }
-
-                        
 
                         if let Ok(stop) = stop.lock() {
                             if *stop == true {
@@ -69,9 +63,8 @@ pub trait FractalWindow {
                             }
                         }
                     }
-
-                    println!("stop 2");
-                });
+                    drop(api);
+                }).unwrap();
             }
 
             nwg::dispatch_thread_events();
@@ -79,26 +72,26 @@ pub trait FractalWindow {
             if let Ok(mut stop) = stop.lock() {
                 *stop = true;
             }
-            //block_on(window.ui_api.as_ref().unwrap().borrow_mut().channel.send(&UiPayload::Ping)).unwrap();
-            println!("stop 1");
-        });
+            
+            // todo: this is api #3 with a queue... somehow get only the sender?
+            block_on(api.api.borrow().channel.send(&UiPayload::Ping)).unwrap();
+        }).unwrap();
     }
 
     fn spawn_child<T: FractalWindow>(&self, data: T::Data) {
         let api = self.get_window_api_initialized().clone();
         T::spawn(data, api)
-    }
+    } 
 }
 #[derive(Clone)]
 pub struct WindowApi {
-    // todo: this actually has to be cloned, not refer to the same value!!!!
-    api: Arc<Mutex<UiApi>>
+    api: RefCell<UiApi>
 }
 
 impl WindowApi {
     pub fn new(api: UiApi) -> Self {
         WindowApi {
-            api: Arc::new(Mutex::new(api))
+            api: RefCell::new(api)
         }
     }
 }
