@@ -1,3 +1,9 @@
+#[derive(Clone, Debug)]
+pub struct FractalDevice {
+    pub model: FractalModel,
+    pub firmware: (u8, u8)
+}
+
 
 #[derive(PartialEq, Debug, Clone, Copy)]
 pub enum FractalModel {

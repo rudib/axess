@@ -9,5 +9,7 @@ quick_error! {
     pub enum FractalCoreError {
         Unknown {}
         MidirInit(err: midir::InitError) { from() }
+        MidirConnectInput(err: midir::ConnectError<midir::MidiInput>) { from() }
+        MidirConnectOutput(err: midir::ConnectError<midir::MidiOutput>) { from() }
     }
 }

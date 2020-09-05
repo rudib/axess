@@ -33,6 +33,15 @@ pub struct MainWindow {
     #[nwg_control(text: "&Help")]
     menu_help: nwg::Menu,
 
+    #[nwg_control(text: "About", parent: menu_help)]
+    //#[nwg_events( OnMenuItemSelected: [MainWindow::disconnect] )]
+    menu_help_about: nwg::MenuItem,
+
+
+    #[nwg_control(text: "Not connected.", parent: window)]
+    status_bar: nwg::StatusBar,
+
+
     /*
     #[nwg_control(text: "MIDI Input", h_align: HTextAlign::Left)]
     #[nwg_layout_item(layout: grid, row: 0, col: 0)]
@@ -58,6 +67,7 @@ pub struct MainWindow {
     hello_button: nwg::Button
     */
 
+
     pub ui_api: Option<WindowApi>
 }
 
@@ -81,7 +91,7 @@ impl FractalWindow for MainWindow {
 
 impl MainWindow {
     fn init(&self) {
-
+        self.send(UiPayload::Connection(PayloadConnection::TryToAutoConnect));
     }
 
     fn exit(&self) {
@@ -93,9 +103,9 @@ impl MainWindow {
         
         // todo: check if we can auto connect, without a window
 
-        self.send(UiPayload::Connection(PayloadConnection::TryToAutoConnect));
+        //self.send(UiPayload::Connection(PayloadConnection::TryToAutoConnect));
 
-        //self.spawn_child::<ConnectWindow>(());
+        self.spawn_child::<ConnectWindow>(());
     }
 
     fn disconnect(&self) {
@@ -104,13 +114,14 @@ impl MainWindow {
 
     fn backend_response(&self) {
         match self.recv() {
-            Some(UiPayload::Connection(PayloadConnection::AutoConnectResult(found))) => {
-                if found == false {
-                    // start the connect window
-                    self.spawn_child::<ConnectWindow>(());
-                }
+            Some(UiPayload::Connection(PayloadConnection::AutoConnectDeviceNotFound)) => {
+                // start the connect window
+                self.spawn_child::<ConnectWindow>(());
             },
-            Some(_) => {},
+            Some(UiPayload::Connection(PayloadConnection::Connected { ref device })) => {
+                self.status_bar.set_text(0, &format!("Connected to {:?}", device));
+            },
+            Some(_) => {}
             None => {}
         }
     }

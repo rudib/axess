@@ -1,3 +1,5 @@
+use crate::model::{model_code, FractalModel};
+
 pub type MidiMessage = Vec<u8>;
 
 pub fn decode_effect_id(a: &u8, b: &u8) -> u32 {
@@ -63,4 +65,20 @@ pub fn with_checksum(msg: MidiMessage) -> MidiMessage {
 pub fn wrap_msg(msg: MidiMessage) -> MidiMessage {
     let header = vec![0xF0, 0x00, 0x01, 0x74];
     with_checksum([header, msg, vec![0xF7]].concat())
+}
+
+pub fn get_current_preset_name(model: FractalModel) -> MidiMessage {
+    if model == FractalModel::III {
+        wrap_msg(vec![model_code(model), 0x0D, 0x7F, 0x7F])
+    } else {
+        wrap_msg(vec![model_code(model), 0x0F])
+    }
+}
+
+pub fn get_firmware_version(model_code: u8) -> MidiMessage {
+    wrap_msg(vec![model_code, 0x08])
+}
+
+pub fn disconnect_from_controller(model: FractalModel) -> MidiMessage {
+    wrap_msg(vec![model_code(model), 0x42])
 }

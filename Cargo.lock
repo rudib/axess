@@ -186,6 +186,7 @@ version = "0.1.0"
 dependencies = [
  "broadcaster",
  "fractal_core",
+ "fractal_protocol",
  "futures",
  "log",
 ]

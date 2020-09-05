@@ -1,25 +1,27 @@
 use super::FractalCoreError;
 
-use ::fractal_protocol::model::FractalModel;
+use ::fractal_protocol::{common::wrap_msg, model::FractalModel};
 
 use midir::{MidiInput, MidiOutput, Ignore, MidiInputPort, MidiOutputPort, MidiInputConnection, MidiOutputConnection};
 use log::{trace};
+use std::time::Duration;
 
 pub struct Midi {
     client_name: String
 }
 
 impl Midi {
-    pub fn new() -> Self {
-        Midi {
+    pub fn new() -> Result<Self, FractalCoreError> {
+        Ok(Midi {
             client_name: "FractalCore".into()
-        }
+        })
     }
 
     pub fn detect_midi_ports(&self) -> Result<MidiPorts, FractalCoreError> {
-        let mut midi_in = MidiInput::new(&format!("{} input", self.client_name))?;
+        
+        let mut midi_in = MidiInput::new(&format!("{} input", &self.client_name))?;
         midi_in.ignore(Ignore::None);
-        let midi_out = MidiOutput::new(&format!("{} output", self.client_name))?;
+        let midi_out = MidiOutput::new(&format!("{} output", &self.client_name))?;
 
         let midi_in_ports = midi_in.ports();
         let midi_out_ports = midi_out.ports();
@@ -32,6 +34,58 @@ impl Midi {
         trace!("Detected MIDI ports: {:?}", ports);
 
         Ok(ports)
+    }
+
+    pub fn connect_to<T: Send, TFnCallback: 'static + Fn(&[u8], &mut T) + Send>(&self, input_port_name: &str, output_port_name: &str, callback: TFnCallback, callback_ctx: T) 
+        -> Result<MidiConnection<T>, FractalCoreError>
+    {
+        
+        let mut midi_in = MidiInput::new(&format!("{} input", &self.client_name))?;
+        midi_in.ignore(Ignore::None);
+        let midi_out = MidiOutput::new(&format!("{} output", &self.client_name))?;
+
+        let midi_in_ports = midi_in.ports();
+        let midi_out_ports = midi_out.ports();
+
+        let midi_in_port = midi_in_ports.into_iter().find(|p| midi_in.port_name(p).ok().map(|n| &n == input_port_name).unwrap_or(false));
+        let midi_out_port = midi_out_ports.into_iter().find(|p| midi_out.port_name(p).ok().map(|n| &n == output_port_name).unwrap_or(false));
+
+        match (midi_in_port, midi_out_port) {
+            (Some(midi_in_port), Some(midi_out_port)) => {
+                trace!("Matched the MIDI ports");
+
+                let in_connection = midi_in.connect(&midi_in_port, &format!("{} Axess In", &self.client_name), move |stamp, message, data| {
+                    trace!("MIDI input: {}: {:x?} (len = {})", stamp, message, message.len());
+                    callback(message, data);
+                }, callback_ctx)?;
+
+                let mut out_connection = midi_out.connect(&midi_out_port, &format!("{} Axess Out", &self.client_name))?;
+
+                trace!("MIDI connection initialized");
+
+                // detect the model
+                //out_connection.send(&wrap_msg(vec![0x7F, 0x00])).unwrap();
+
+                /*
+                if let Ok(msg) = r.recv_timeout(Duration::from_millis(500)) {
+                    if let Some(msg_model) = msg.model {
+                        model = Some(msg_model);
+                    }
+                }
+                */
+
+                return Ok(MidiConnection {
+                    input: in_connection,
+                    output: out_connection
+                });
+
+                //std::thread::sleep_ms(100);
+            },
+            _ => {
+                trace!("Midi ports to connect not found!");
+                return Err(FractalCoreError::Unknown);
+            }
+        }
     }
 }
 #[derive(Debug, Clone)]
@@ -80,4 +134,9 @@ pub struct MidiConnectionDeviceRequest {
     pub input_port_name: String,
     pub output_port_name: String,
     pub fractal_model: FractalModel
+}
+
+pub struct MidiConnection<T: 'static> {
+    pub input: MidiInputConnection<T>,
+    pub output: MidiOutputConnection
 }

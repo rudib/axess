@@ -13,3 +13,4 @@ futures = "0.3"
 log = "0.4"
 
 fractal_core = { path = "../fractal_core/" }
+fractal_protocol = { path = "../fractal_protocol/" }
