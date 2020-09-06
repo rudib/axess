@@ -4,7 +4,7 @@ use nwg::NativeUi;
 use std::thread;
 use std::{cell::RefCell};
 
-use fractal_backend::{payload::{PayloadConnection, UiPayload}};
+use fractal_backend::{payload::{PayloadConnection, UiPayload, DeviceState}};
 use super::{common::{FractalWindow, WindowApi}, connect::ConnectWindow};
 use crate::windows::main::main_window_ui::MainWindowUi;
 
@@ -15,9 +15,6 @@ pub struct MainWindow {
     #[nwg_control(title: "Axess Fractal Audio Editor", flags: "MAIN_WINDOW|VISIBLE")]
     #[nwg_events( OnInit: [MainWindow::init], OnWindowClose: [MainWindow::on_exit] )]
     window: nwg::Window,
-
-    #[nwg_layout(parent: window, spacing: 1)]
-    grid: nwg::GridLayout,
 
     #[nwg_control(text: "&Device")]
     menu_device: nwg::Menu,
@@ -47,6 +44,27 @@ pub struct MainWindow {
 
     #[nwg_control(text: NOT_CONNECTED, parent: window)]
     status_bar: nwg::StatusBar,
+
+
+
+    #[nwg_layout(parent: window, spacing: 1)]
+    grid: nwg::GridLayout,
+
+    #[nwg_control]
+    #[nwg_layout_item(layout: grid, row: 0, col: 0)]
+    preset_number: nwg::Label,
+
+    #[nwg_control]
+    #[nwg_layout_item(layout: grid, row: 0, col: 1)]
+    preset_name: nwg::Label,
+
+    #[nwg_control]
+    #[nwg_layout_item(layout: grid, row: 1, col: 0)]
+    scene_number: nwg::Label,
+
+    #[nwg_control]
+    #[nwg_layout_item(layout: grid, row: 1, col: 1)]
+    scene_name: nwg::Label,
 
 
     #[nwg_control]
@@ -104,6 +122,12 @@ impl MainWindow {
                 self.status_bar.set_text(0, NOT_CONNECTED);
                 self.menu_device_connect.set_enabled(true);
                 self.menu_device_disconnect.set_enabled(false);
+            },
+            Some(UiPayload::DeviceState(DeviceState::PresetAndScene(ref p))) => {
+                self.preset_number.set_text(&format!("{:0>3}", p.preset));
+                self.preset_name.set_text(&p.preset_name);
+                self.scene_number.set_text(&format!("Scene {}", p.scene));
+                self.scene_name.set_text(&p.scene_name);
             },
             Some(_) => {}
             None => {}

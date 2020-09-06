@@ -1,6 +1,6 @@
 use broadcaster::BroadcastChannel;
 use crate::{midi::{MidiConnection, Midi}, payload::{PayloadConnection, UiPayload, ConnectToMidiPorts}, FractalResult, FractalResultVoid, utils::filter_first};
-use fractal_protocol::{message::{FractalMessage, FractalMessageWrapper}, model::{model_code, FractalDevice}, message2::validate_and_decode_message, common::{disconnect_from_controller, wrap_msg, get_current_preset_name, get_firmware_version}};
+use fractal_protocol::{message::{FractalMessage, FractalMessageWrapper}, model::{model_code, FractalDevice}, message2::validate_and_decode_message, common::{disconnect_from_controller, wrap_msg, get_current_preset_name, get_firmware_version, get_current_scene_name}};
 use std::{time::Duration, thread, pin::Pin};
 use log::{error, trace};
 use tokio::runtime::Runtime;
@@ -32,6 +32,7 @@ impl ConnectedDevice {
         let timeout = Duration::from_millis(100);
 
         self.midi_connection.output.send(&get_current_preset_name(self.device.model))?;
+        self.midi_connection.output.send(&get_current_scene_name(self.device.model))?;
 
         let mut device_state = DeviceState::default();
         filter_first(&mut self.midi_messages, |msg| {
@@ -41,6 +42,14 @@ impl ConnectedDevice {
                     device_state.preset_name = preset_name;
                 }
                 _ => ()
+            }
+            Some(())
+        }, timeout).await?;
+
+        filter_first(&mut self.midi_messages, |msg| {
+            if let FractalMessage::SceneName(scene, name) = msg.message {
+                device_state.scene_number = scene;
+                device_state.scene_name = name;
             }
             Some(())
         }, timeout).await?;
@@ -57,7 +66,9 @@ impl ConnectedDevice {
 #[derive(Default, Debug, Clone, Eq, PartialEq)]
 struct DeviceState {
     preset_number: u32,
-    preset_name: String
+    preset_name: String,
+    scene_number: u8,
+    scene_name: String
 }
 
 impl UiBackend {    
@@ -219,10 +230,12 @@ impl UiBackend {
 
     async fn send_device_state(&self) -> FractalResultVoid {
         if let Some(ref connected_device) = self.device {
+            let state = &connected_device.state;
             self.send(UiPayload::DeviceState(crate::payload::DeviceState::PresetAndScene(crate::payload::PresetAndScene {
-                preset: connected_device.state.preset_number as u16,
-                preset_name: connected_device.state.preset_name.clone(),
-                .. Default::default()
+                preset: state.preset_number as u16,
+                preset_name: state.preset_name.clone(),
+                scene: state.scene_number,
+                scene_name: state.scene_name.clone()
             }))).await?;
         }
 
