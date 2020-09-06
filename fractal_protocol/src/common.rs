@@ -83,3 +83,20 @@ pub fn get_firmware_version(model_code: u8) -> MidiMessage {
 pub fn disconnect_from_controller(model: FractalModel) -> MidiMessage {
     wrap_msg(vec![model_code(model), 0x42])
 }
+
+pub fn get_current_scene_name(model: FractalModel) -> MidiMessage {
+    get_scene_name(model, 0x7F)
+}
+
+pub fn get_scene_name(model: FractalModel, scene: u8) -> MidiMessage {
+    wrap_msg(vec![model_code(model), 0x0E, scene])
+}
+
+pub fn set_preset_number(model: FractalModel, n: u32) -> MidiMessage {
+    let (a, b) = encode_preset_number(n);
+    wrap_msg(vec![model_code(model), 0x3C, a, b])
+}
+
+fn encode_preset_number(n: u32) -> (u8, u8) {
+    ((n >> 7) as u8, (n & 0x7F) as u8)
+}

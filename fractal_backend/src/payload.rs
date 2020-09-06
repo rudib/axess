@@ -45,7 +45,8 @@ pub enum DeviceState {
     PresetAndScene(PresetAndScene),
     SetPresetAndScene { preset: u16, scene: Option<u8> }
 }
-#[derive(Debug, Clone)]
+
+#[derive(Default, Debug, Clone)]
 pub struct PresetAndScene {
     pub preset: u16,
     pub preset_name: String,

@@ -6,9 +6,9 @@ use crate::{FractalResult, FractalCoreError};
 
 
 /// Tries to find and map the matching message from the broadcast channel. With timeout support.
-pub async fn filter_first<T: Send + Clone, TOut, TMap: Fn(T) -> Option<TOut>>(channel: &mut broadcaster::BroadcastChannel<T>, map_and_filter: TMap, timeout: Duration) -> FractalResult<TOut> {
+pub async fn filter_first<T: Send + Clone, TOut, TMap: FnMut(T) -> Option<TOut>>(channel: &mut broadcaster::BroadcastChannel<T>, map_and_filter: TMap, timeout: Duration) -> FractalResult<TOut> {
         
-    async fn first_message<T: Send + Clone, TOut, TMap: Fn(T) -> Option<TOut>>(channel: &mut broadcaster::BroadcastChannel<T>, map_and_filter: TMap) -> FractalResult<TOut> {
+    async fn first_message<T: Send + Clone, TOut, TMap: FnMut(T) -> Option<TOut>>(channel: &mut broadcaster::BroadcastChannel<T>, mut map_and_filter: TMap) -> FractalResult<TOut> {
         loop {
             let msg = channel.recv().await;
             if let Some(msg) = msg {
