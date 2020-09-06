@@ -15,7 +15,7 @@ pub fn decode_preset_number(lsb: u8, rsb: u8) -> u32 {
 pub fn decode_preset_name(msg: &[u8]) -> String {
     msg.iter()
         .take(32)
-        .filter(|x| *x > &0)
+        .take_while(|x| *x > &0)
         .map(|x| *x as u8 as char)
         .collect::<String>()
         .trim_end()
