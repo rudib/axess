@@ -1,14 +1,13 @@
 extern crate fractal_protocol;
-extern crate fractal_core;
 extern crate broadcaster;
 
 extern crate native_windows_gui as nwg;
 extern crate native_windows_derive as nwd;
 
-use fractal_backend::UiBackend;
 use windows::{common::{WindowApi, FractalWindow}, main::MainWindow};
 use log4rs::{append::console::{Target, ConsoleAppender}, config::{Appender, Config, Root}};
 use log::LevelFilter;
+use fractal_backend::backend::UiBackend;
 
 mod windows;
 

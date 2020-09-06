@@ -1,5 +1,6 @@
 
-use fractal_core::{FractalCoreError, midi::MidiPorts};
+use crate::midi::MidiPorts;
+use crate::FractalCoreError;
 
 #[derive(Debug, Clone)]
 pub enum UiPayload {

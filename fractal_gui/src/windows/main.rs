@@ -4,7 +4,7 @@ use nwg::NativeUi;
 use std::thread;
 use std::{cell::RefCell};
 
-use fractal_backend::{UiApi, UiBackend, payload::{PayloadConnection, UiPayload}};
+use fractal_backend::{payload::{PayloadConnection, UiPayload}};
 use super::{common::{FractalWindow, WindowApi}, connect::ConnectWindow};
 use crate::windows::main::main_window_ui::MainWindowUi;
 

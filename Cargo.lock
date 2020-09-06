@@ -191,21 +191,12 @@ name = "fractal_backend"
 version = "0.1.0"
 dependencies = [
  "broadcaster",
- "fractal_core",
  "fractal_protocol",
  "futures",
  "log",
- "tokio",
-]
-
-[[package]]
-name = "fractal_core"
-version = "0.1.0"
-dependencies = [
- "fractal_protocol",
- "log",
  "midir",
  "quick-error 2.0.0",
+ "tokio",
 ]
 
 [[package]]
@@ -214,7 +205,6 @@ version = "0.1.0"
 dependencies = [
  "broadcaster",
  "fractal_backend",
- "fractal_core",
  "fractal_protocol",
  "futures",
  "log",

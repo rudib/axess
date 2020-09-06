@@ -8,7 +8,6 @@ edition = "2018"
 
 [dependencies]
 fractal_protocol = { path = "../fractal_protocol/" }
-fractal_core = { path = "../fractal_core/" }
 fractal_backend = { path = "../fractal_backend/" }
 
 native-windows-gui = "1.0"

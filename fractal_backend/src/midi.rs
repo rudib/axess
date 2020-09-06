@@ -97,7 +97,7 @@ impl MidiPorts {
 
         for (name, model) in &known_names {
             let filter = |port_name: &&String| {
-                port_name.starts_with(name)
+                port_name.contains(name)
             };
 
             let input_port = self.inputs.iter().find(filter);

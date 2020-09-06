@@ -3,7 +3,7 @@ use nwg::{ComboBox, NativeUi};
 
 use std::{cell::RefCell, sync::{Mutex, Arc}};
 
-use fractal_backend::{UiApi, UiBackend, payload::{PayloadConnection, UiPayload, ConnectToMidiPorts}};
+use fractal_backend::{payload::{PayloadConnection, UiPayload, ConnectToMidiPorts}};
 use super::common::{FractalWindow, WindowApi};
 use crate::windows::connect::connect_window_ui::ConnectWindowUi;
 

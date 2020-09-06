@@ -12,5 +12,7 @@ futures = "0.3"
 log = "0.4"
 tokio = {version = "0.2", features = ["time"] }
 
-fractal_core = { path = "../fractal_core/" }
 fractal_protocol = { path = "../fractal_protocol/" }
+
+midir = "0.6"
+quick-error = "2.0"

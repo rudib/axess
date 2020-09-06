@@ -1,9 +1,3 @@
-extern crate midir;
-extern crate log;
-#[macro_use] extern crate quick_error;
-
-pub mod midi;
-
 quick_error! {
     #[derive(Debug, Clone)]
     pub enum FractalCoreError {
@@ -13,6 +7,8 @@ quick_error! {
         MidirInit(err: midir::InitError) { from() }
         MidirConnectError { }
         MidirSendError(err: midir::SendError) { from() }
+
+        BroadcastError(val: String) { }
     }
 }
 
@@ -27,3 +23,12 @@ impl From<midir::ConnectError<midir::MidiOutput>> for FractalCoreError {
         FractalCoreError::MidirConnectError
     }
 }
+
+impl From<futures::channel::mpsc::SendError> for FractalCoreError {
+    fn from(_: futures::channel::mpsc::SendError) -> Self {
+        FractalCoreError::BroadcastError("channel".into())
+    }
+}
+
+pub type FractalResult<T> = Result<T, FractalCoreError>;
+pub type FractalResultVoid = FractalResult<()>;

@@ -1,5 +1,5 @@
 use std::{thread, cell::RefCell, sync::{Mutex, Arc}, ops::Deref, any::type_name};
-use fractal_backend::{UiApi, payload::UiPayload};
+use fractal_backend::{payload::UiPayload, backend::UiApi};
 use futures::executor::block_on;
 use nwg::{NwgError, NativeUi};
 
