@@ -12,3 +12,7 @@ W: Previous Scene (-1)
 S: Next Scene (+1)
 A: Previous Preset (-1)
 D: Next Preset (+1)
+
+## Running
+
+`cargo run` should build and run the `axess_gui` project.
