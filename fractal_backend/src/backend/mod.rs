@@ -1,10 +1,11 @@
 use broadcaster::BroadcastChannel;
 use crate::{midi::{MidiConnection, Midi}, payload::{PayloadConnection, UiPayload, ConnectToMidiPorts}, FractalResult, FractalResultVoid, utils::filter_first};
 use fractal_protocol::{message::{FractalMessage, FractalMessageWrapper}, model::{model_code, FractalDevice}, message2::validate_and_decode_message, common::{disconnect_from_controller, wrap_msg, get_current_preset_name, get_firmware_version}};
-use std::{time::Duration, thread};
+use std::{time::Duration, thread, pin::Pin};
 use log::trace;
 use tokio::runtime::Runtime;
-use futures::executor::block_on;
+use tokio::stream::{pending, Stream};
+use futures::{Future, executor::block_on, StreamExt, future::Either};
 use crate::FractalCoreError;
 
 #[derive(Clone)]
@@ -17,7 +18,8 @@ pub struct UiBackend {
     midi: Midi,
     midi_connection: Option<MidiConnection<BroadcastChannel<FractalMessageWrapper>>>,
     device: Option<FractalDevice>,
-    midi_messages: BroadcastChannel<FractalMessageWrapper>
+    midi_messages: BroadcastChannel<FractalMessageWrapper>,
+    status_poller: Pin<Box<dyn Stream<Item = tokio::time::Instant>>>
 }
 
 impl UiBackend {    
@@ -28,15 +30,17 @@ impl UiBackend {
             channel: chan.clone()
         };
 
-        let mut backend = UiBackend {
-            channel: chan,
-            midi: Midi::new().unwrap(),
-            midi_connection: None,
-            midi_messages: BroadcastChannel::new(),
-            device: None
-        };
-
+        
         thread::Builder::new().name("Backend".into()).spawn(move || {
+            let mut backend = UiBackend {
+                channel: chan,
+                midi: Midi::new().unwrap(),
+                midi_connection: None,
+                midi_messages: BroadcastChannel::new(),
+                device: None,
+                status_poller: Box::pin(pending())
+            };
+
             trace!("Backend initialized");
             
             let mut runtime = Runtime::new().unwrap();
@@ -49,23 +53,40 @@ impl UiBackend {
     }
 
     async fn main_loop(&mut self) {
-        loop {
-            let msg = self.channel.recv().await;
-            if let Some(ref msg) = msg {
-                trace!("Backend message received: {:?}", msg);
+        loop {            
+            let mut msg = None;
+
+            {
+                let r = futures::future::select(self.channel.recv(), self.status_poller.next()).await;
+                match r {
+                    Either::Left(x) => {                    
+                        if let Some(ref m) = x.0 {
+                            msg = Some(m.clone());
+                        }
+                    },
+                    Either::Right(y) => {
+                        println!("poll!");
+                        continue;
+                    }
+                }
             }
 
-            match msg {  
+            {
+                if let Some(ref msg) = msg {
+                    trace!("Backend message received: {:?}", msg);
+                }
 
-                Some(UiPayload::Connection(c)) => {
-                    self.connection(c).await;
-                },
-                Some(_) => {
-
-                },
-                None => {
-                    println!("end of stream!");
-                    break;
+                match msg {
+                    Some(UiPayload::Connection(c)) => {
+                        self.connection(c).await;
+                    },
+                    Some(_) => {
+        
+                    },
+                    None => {
+                        println!("end of stream!"); // if not polling?
+                        break;
+                    }
                 }
             }
         }
@@ -143,11 +164,12 @@ impl UiBackend {
             _ => {}
         }
         
-        trace!("start the poller!");
+        self.status_poller = Box::pin(tokio::time::interval(Duration::from_millis(100)));
+        
     }
 
     fn on_disconnect(&mut self) {
-        trace!("stop the poller!");
+        self.status_poller = Box::pin(pending());
     }
 
     fn midi_message_callback(msg: &[u8], ctx: &mut BroadcastChannel<FractalMessageWrapper>) {
