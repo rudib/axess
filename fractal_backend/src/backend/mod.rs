@@ -53,40 +53,42 @@ impl UiBackend {
     }
 
     async fn main_loop(&mut self) {
-        loop {            
-            let mut msg = None;
-
-            {
+        loop {
+            enum PendingAction { Message(UiPayload), EndOfMessagesChannel, Poll }
+            
+            let action = {
                 let r = futures::future::select(self.channel.recv(), self.status_poller.next()).await;
                 match r {
                     Either::Left(x) => {                    
-                        if let Some(ref m) = x.0 {
-                            msg = Some(m.clone());
+                        if let Some(m) = x.0 {
+                            PendingAction::Message(m)
+                        } else {
+                            PendingAction::EndOfMessagesChannel
                         }
                     },
-                    Either::Right(y) => {
-                        println!("poll!");
-                        continue;
+                    Either::Right(_) => {
+                        PendingAction::Poll
                     }
                 }
-            }
+            };
 
-            {
-                if let Some(ref msg) = msg {
+            match action {
+                PendingAction::Message(msg) => {
                     trace!("Backend message received: {:?}", msg);
-                }
 
-                match msg {
-                    Some(UiPayload::Connection(c)) => {
-                        self.connection(c).await;
-                    },
-                    Some(_) => {
-        
-                    },
-                    None => {
-                        println!("end of stream!"); // if not polling?
-                        break;
-                    }
+                    match msg {
+                        UiPayload::Connection(c) => {
+                            self.connection(c).await;
+                        },
+                        _ => {}
+                    };
+                },
+                PendingAction::EndOfMessagesChannel => {
+                    println!("end of stream!");
+                    break;
+                },
+                PendingAction::Poll => {
+                    self.status_poll().await;
                 }
             }
         }
@@ -154,6 +156,13 @@ impl UiBackend {
         }
 
         Ok(())
+    }
+
+    /// request the basic infos from the device that might have changed
+    async fn status_poll(&mut self) {
+
+
+
     }
 
     fn on_connect(&mut self) {
