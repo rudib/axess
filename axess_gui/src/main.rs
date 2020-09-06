@@ -7,7 +7,7 @@ extern crate native_windows_derive as nwd;
 use windows::{common::{WindowApi, FractalWindow}, main::MainWindow};
 use log4rs::{append::console::{Target, ConsoleAppender}, config::{Appender, Config, Root}};
 use log::LevelFilter;
-use fractal_backend::backend::UiBackend;
+use axess_core::backend::UiBackend;
 
 mod windows;
 

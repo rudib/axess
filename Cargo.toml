@@ -2,6 +2,6 @@
 
 members = [
 "fractal_protocol",
-"fractal_gui",
-"fractal_backend"
+"axess_core",
+"axess_gui"
 ]
