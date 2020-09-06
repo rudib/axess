@@ -67,8 +67,6 @@ impl Midi {
                     input: in_connection,
                     output: out_connection
                 });
-
-                //std::thread::sleep_ms(100);
             },
             _ => {
                 trace!("Midi ports to connect not found!");

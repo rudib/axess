@@ -100,3 +100,47 @@ pub fn set_preset_number(model: FractalModel, n: u32) -> MidiMessage {
 fn encode_preset_number(n: u32) -> (u8, u8) {
     ((n >> 7) as u8, (n & 0x7F) as u8)
 }
+
+pub fn set_scene_number(model: FractalModel, scene_number: u8) -> MidiMessage {
+    let command = if model == FractalModel::III || model == FractalModel::FM3 {
+        0x0C
+    } else {
+        0x29
+    };
+    wrap_msg(vec![model_code(model), command, scene_number])
+}
+
+
+#[test]
+fn test_set_preset_number() {
+    assert_eq!(
+        vec![
+            0xF0,
+            0x00,
+            0x01,
+            0x74,
+            model_code(FractalModel::II),
+            0x3C,
+            0,
+            127,
+            69,
+            0xF7
+        ],
+        set_preset_number(FractalModel::II, 127)
+    );
+    assert_eq!(
+        vec![
+            0xF0,
+            0x00,
+            0x01,
+            0x74,
+            model_code(FractalModel::II),
+            0x3C,
+            1,
+            0,
+            59,
+            0xF7
+        ],
+        set_preset_number(FractalModel::II, 128)
+    );
+}

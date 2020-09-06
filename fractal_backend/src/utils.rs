@@ -30,13 +30,3 @@ pub async fn filter_first<T: Send + Clone, TOut, TMap: FnMut(T) -> Option<TOut>>
         Err(_) => Err(FractalCoreError::Timeout)
     }
 }
-
-/*
-pub fn block_on_with_timeout<F: Future>(f: F, t: Duration) -> Result<F::Output, FractalCoreError> {
-    let mut runtime = Runtime::new().unwrap();
-    let r = runtime.block_on(async {
-        timeout(t, f).await
-    });
-    r.map_err(|_| FractalCoreError::Timeout)
-}
-*/

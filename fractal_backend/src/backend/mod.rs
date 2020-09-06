@@ -1,11 +1,11 @@
 use broadcaster::BroadcastChannel;
 use crate::{midi::{MidiConnection, Midi}, payload::{PayloadConnection, UiPayload, ConnectToMidiPorts}, FractalResult, FractalResultVoid, utils::filter_first};
-use fractal_protocol::{message::{FractalMessage, FractalMessageWrapper}, model::{model_code, FractalDevice}, message2::validate_and_decode_message, common::{disconnect_from_controller, wrap_msg, get_current_preset_name, get_firmware_version, get_current_scene_name}};
+use fractal_protocol::{message::{FractalMessage, FractalMessageWrapper}, model::{model_code, FractalDevice}, message2::validate_and_decode_message, common::{disconnect_from_controller, wrap_msg, get_current_preset_name, get_firmware_version, get_current_scene_name, set_preset_number, set_scene_number}, functions::FractalFunction};
 use std::{time::Duration, thread, pin::Pin};
 use log::{error, trace};
 use tokio::runtime::Runtime;
 use tokio::stream::{pending, Stream};
-use futures::{Future, executor::block_on, StreamExt, future::Either};
+use futures::{executor::block_on, StreamExt, future::{self, Either}};
 use crate::FractalCoreError;
 
 #[derive(Clone)]
@@ -24,38 +24,48 @@ struct ConnectedDevice {
     midi_connection: MidiConnection<BroadcastChannel<FractalMessageWrapper>>,
     device: FractalDevice,
     midi_messages: BroadcastChannel<FractalMessageWrapper>,
-    state: DeviceState
+    state: DeviceState,
+    midi_channel: u8
 }
 
 impl ConnectedDevice {
     async fn update_state(&mut self) -> FractalResult<bool> {
-        let timeout = Duration::from_millis(100);
+        let timeout = Duration::from_millis(500);
+
+        let mut channel = self.midi_messages.clone();
 
         self.midi_connection.output.send(&get_current_preset_name(self.device.model))?;
         self.midi_connection.output.send(&get_current_scene_name(self.device.model))?;
 
         let mut device_state = DeviceState::default();
-        filter_first(&mut self.midi_messages, |msg| {
-            match msg.message {
-                FractalMessage::PresetName(preset_number, preset_name) => {
-                    device_state.preset_number = preset_number;
-                    device_state.preset_name = preset_name;
-                }
-                _ => ()
-            }
-            Some(())
-        }, timeout).await?;
 
-        filter_first(&mut self.midi_messages, |msg| {
-            if let FractalMessage::SceneName(scene, name) = msg.message {
-                device_state.scene_number = scene;
-                device_state.scene_name = name;
-            }
-            Some(())
-        }, timeout).await?;
+        let scan = channel
+            .scan(0 as u32, |state, msg| {
+                match &msg.message {
+                    FractalMessage::PresetName(preset_number, preset_name) => {
+                        device_state.preset_number = *preset_number;
+                        device_state.preset_name = preset_name.clone();
+                        *state += 1;
+                    },
+                    FractalMessage::SceneName(scene, name) => {
+                        device_state.scene_number = *scene;
+                        device_state.scene_name = name.clone();
+                        *state += 1;
+                    },
+                    _ => ()
+                }
+
+                future::ready(if *state < 2 { Some(msg) } else { None })
+            });
+        
+        let t = tokio::time::timeout(timeout, scan.collect::<Vec<_>>()).await;
+        if t.is_err() {
+            return Err(FractalCoreError::Timeout);
+        }
 
         if device_state != self.state {
             self.state = device_state;
+            
             return Ok(true);
         }
 
@@ -78,7 +88,6 @@ impl UiBackend {
         let api = UiApi {
             channel: chan.clone()
         };
-
         
         thread::Builder::new().name("Backend".into()).spawn(move || {
             let mut backend = UiBackend {
@@ -127,6 +136,25 @@ impl UiBackend {
                         UiPayload::Connection(c) => {
                             self.connection(c).await;
                         },
+                        UiPayload::DeviceState(crate::payload::DeviceState::SetPreset{ preset }) => {
+                            if let Some(ref mut device) = self.device {
+                                let bank = (preset / 128) as u8;
+                                let patch = (preset % 128) as u8;
+                                device.midi_connection.output.send(&vec![0xB0, 0x00, bank]);
+                                device.midi_connection.output.send(&vec![0xC0, patch]);
+                            }
+
+                            tokio::time::delay_for(Duration::from_millis(10)).await;
+                            self.status_poll().await;
+                        },
+                        UiPayload::DeviceState(crate::payload::DeviceState::SetScene { scene }) => {
+                            if let Some(ref mut device) = self.device {
+                                device.midi_connection.output.send(&set_scene_number(device.device.model, scene));
+                            }
+
+                            tokio::time::delay_for(Duration::from_millis(10)).await;
+                            self.status_poll().await;
+                        }
                         _ => {}
                     };
                 },
@@ -217,6 +245,7 @@ impl UiBackend {
                 Err(e) => {
                     // failed to poll the device. disconnect.
                     error!("Polling failed: {:?}", e);
+                    self.channel.send(&UiPayload::Connection(PayloadConnection::Disconnect)).await?;
                 }
             }
         }
@@ -243,7 +272,7 @@ impl UiBackend {
     }
 
     fn on_connect(&mut self) {
-        self.status_poller = Box::pin(tokio::time::interval(Duration::from_millis(100)));
+        self.status_poller = Box::pin(tokio::time::interval(Duration::from_millis(1000)));
         
     }
 
@@ -298,6 +327,19 @@ impl UiBackend {
         let firmware = firmware.map_err(|_| FractalCoreError::MissingValue("Firmware".into()))?;
         trace!("Detected firmware {:?}", firmware);
 
+        // get the midi channel
+        connection.output.send(&wrap_msg(vec![model_code(model), FractalFunction::GET_MIDI_CHANNEL as u8]));
+
+        let midi_channel = filter_first(&mut midi_messages, |msg| {
+            match msg.message {
+                FractalMessage::MultipurposeResponse { function_id, response_code } if function_id == FractalFunction::GET_MIDI_CHANNEL as u8 => {
+                    Some(response_code)
+                },
+                _ => { None }
+            }
+        }, timeout).await;
+        let midi_channel = midi_channel.map_err(|_| FractalCoreError::MissingValue("MIDI channel".into()))?;
+        trace!("MIDI channel: {}", midi_channel);
         
         let device = FractalDevice {
             firmware: firmware,
@@ -306,6 +348,7 @@ impl UiBackend {
 
         let mut connected_device = ConnectedDevice {
             device: device,
+            midi_channel: midi_channel,
             midi_connection: connection,
             midi_messages: midi_messages,
             state: DeviceState::default()

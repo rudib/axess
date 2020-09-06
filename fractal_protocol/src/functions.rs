@@ -15,6 +15,6 @@ pub enum FractalFunction {
     BATCH_LIST_REQUEST_START = 0x32,
     BATCH_LIST_REQUEST_COMPLETE = 0x33,
     GET_PRESET_NAME = 0x0F,
-    GET_SCENE_NAME = 0x0E
+    //GET_SCENE_NAME = 0x0E
 }
 
