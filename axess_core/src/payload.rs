@@ -1,5 +1,5 @@
 
-use crate::midi::MidiPorts;
+use crate::transport::midi::MidiPorts;
 use crate::FractalCoreError;
 
 #[derive(Debug, Clone)]

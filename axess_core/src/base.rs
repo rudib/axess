@@ -3,11 +3,12 @@ quick_error! {
     pub enum FractalCoreError {
         Timeout {}
         Unknown {}
+        Other (val: String) { }
         MissingValue(val: String) { }
         MidirInit(err: midir::InitError) { from() }
         MidirConnectError { }
         MidirSendError(err: midir::SendError) { from() }
-
+        IoError { }
         BroadcastError(val: String) { }
     }
 }
@@ -27,6 +28,12 @@ impl From<midir::ConnectError<midir::MidiOutput>> for FractalCoreError {
 impl From<futures::channel::mpsc::SendError> for FractalCoreError {
     fn from(_: futures::channel::mpsc::SendError) -> Self {
         FractalCoreError::BroadcastError("channel".into())
+    }
+}
+
+impl From<std::io::Error> for FractalCoreError {
+    fn from(_: std::io::Error) -> Self {
+        FractalCoreError::IoError
     }
 }
 

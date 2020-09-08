@@ -1,5 +1,6 @@
 use broadcaster::BroadcastChannel;
-use crate::{midi::{MidiConnection, Midi}, payload::{PayloadConnection, UiPayload, ConnectToMidiPorts}, FractalResult, FractalResultVoid, utils::filter_first};
+use crate::{payload::{PayloadConnection, UiPayload, ConnectToMidiPorts}, FractalResult, FractalResultVoid, utils::filter_first};
+use crate::transport::midi::{MidiConnection, Midi};
 use fractal_protocol::{message::{FractalMessage, FractalMessageWrapper}, model::{model_code, FractalDevice}, message2::validate_and_decode_message, common::{disconnect_from_controller, wrap_msg, get_current_preset_name, get_firmware_version, get_current_scene_name, set_preset_number, set_scene_number}, functions::FractalFunction};
 use std::{time::Duration, thread, pin::Pin};
 use log::{error, trace};
