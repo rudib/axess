@@ -2,10 +2,16 @@ pub mod midi;
 pub mod serial;
 
 
-use crate::FractalCoreError;
-use crossbeam_channel::{Sender, Receiver};
+use crate::{FractalResultVoid, FractalCoreError};
+use crossbeam_channel::{Receiver};
 
 pub type TransportMessage = Vec<u8>;
+
+#[derive(Debug, Clone)]
+pub struct Endpoint {
+    pub transport_id: String,
+    pub transport_endpoint: TransportEndpoint
+}
 
 #[derive(Debug, Clone)]
 pub struct TransportEndpoint {
@@ -14,14 +20,12 @@ pub struct TransportEndpoint {
 }
 
 pub trait Transport {
-    type TConnection: TransportConnection;
-
-    fn id() -> String;
+    fn id(&self) -> String;
     fn detect_endpoints(&self) -> Result<Vec<TransportEndpoint>, FractalCoreError>;
-    fn connect(&self, endpoint: &TransportEndpoint) -> Result<Self::TConnection, FractalCoreError>;
+    fn connect(&self, endpoint: &TransportEndpoint) -> Result<Box<dyn TransportConnection>, FractalCoreError>;
 }
 
 pub trait TransportConnection {
     fn get_receiver(&self) -> &Receiver<TransportMessage>;
-    fn get_sender(&self) -> &Sender<TransportMessage>;
+    fn write(&mut self, buf: &[u8]) -> FractalResultVoid;
 }

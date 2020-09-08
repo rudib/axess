@@ -113,8 +113,20 @@ impl FractalWindow for MainWindow {
 }
 
 impl MainWindow {
+    fn main_controls_when_connected(&self, visibility: bool) {
+        self.preset_number.set_visible(visibility);
+        self.preset_name.set_visible(visibility);
+        self.preset_minus.set_visible(visibility);
+        self.preset_plus.set_visible(visibility);
+        self.scene_number.set_visible(visibility);
+        self.scene_name.set_visible(visibility);
+        self.scene_plus.set_visible(visibility);
+        self.scene_minus.set_visible(visibility);
+    }
+
     fn init(&self) {
-        self.send(UiPayload::Connection(PayloadConnection::TryToAutoConnect));
+        //self.send(UiPayload::Connection(PayloadConnection::TryToAutoConnect));        
+        self.main_controls_when_connected(false);
     }
 
     fn connect(&self) {
@@ -134,12 +146,14 @@ impl MainWindow {
                 //self.spawn_child::<ConnectWindow>(());
             },
             Some(UiPayload::Connection(PayloadConnection::Connected { ref device })) => {
+                self.main_controls_when_connected(true);
                 self.status_bar.set_text(0, &format!("Connected to {}.", device));
                 self.menu_device_connect.set_enabled(false);
                 self.menu_device_disconnect.set_enabled(true);   
                 *self.is_connected.borrow_mut() = true;
             },
             Some(UiPayload::Connection(PayloadConnection::Disconnect)) => {
+                self.main_controls_when_connected(false);
                 self.status_bar.set_text(0, NOT_CONNECTED);
                 self.menu_device_connect.set_enabled(true);
                 self.menu_device_disconnect.set_enabled(false);

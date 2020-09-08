@@ -4,13 +4,13 @@
 #[cfg(target_os="windows")]
 extern crate wmi;
 
-extern crate serial;
+extern crate serialport;
 
-use crate::FractalCoreError;
-use std::{time::Duration, io::{Read, Write, ErrorKind}, thread::JoinHandle};
-use serial::{windows::COMPort, SerialPort};
+use crate::{FractalResultVoid, FractalCoreError};
+use std::{time::Duration, io::{Read, Write, self}, sync::{Mutex, Arc}};
 use super::{TransportConnection, Transport, TransportEndpoint, TransportMessage};
-use crossbeam_channel::{Sender, Receiver};
+use crossbeam_channel::{Receiver};
+use serialport::SerialPort;
 
 #[derive(Debug, Clone)]
 pub struct DetectedSerialPort {
@@ -48,55 +48,16 @@ fn detect_serial_ports() -> Vec<DetectedSerialPort> {
     ret
 }
 
-pub fn port_test(port_name: &str) -> Result<(), FractalCoreError> {
-    let mut port = serial::open(port_name)?;
-    println!("open!");
-    
-    port.reconfigure(&|settings| {
-        settings.set_baud_rate(serial::Baud9600)?;
-        settings.set_char_size(serial::Bits8);
-        settings.set_parity(serial::ParityNone);
-        settings.set_stop_bits(serial::Stop1);
-        settings.set_flow_control(serial::FlowNone);
-        Ok(())
-    })?;
-
-    port.set_timeout(Duration::from_millis(100))?;
-    println!("configured");
-    
-    port.write(&['A' as u8, 'B' as u8, 'C' as u8])?;
-    println!("written");
-
-    let mut buf = [0; 150];
-    let len = port.read(&mut buf)?;
-    println!("read {} bytes", len);
-
-    match port.read(&mut buf) {
-        Ok(len) => {
-
-        },
-        Err(e) if e.kind() == ErrorKind::TimedOut => {
-            println!("timed out, retry");
-        },
-        Err(e) => {
-            println!("error: {:?}", e);
-        }
-    }
-
-    Ok(())
-}
-
 #[cfg(not(target_os="windows"))]
 pub fn detect_serial_ports() -> Vec<SerialPort> {
     not_implemented!("Missing support for serial ports.");
 }
 
-impl From<serial::Error> for FractalCoreError {
-    fn from(_: serial::Error) -> Self {
-        FractalCoreError::Other("Serial IO".into())
+impl From<serialport::Error> for FractalCoreError {
+    fn from(_: serialport::Error) -> Self {
+        FractalCoreError::IoError
     }
 }
-
 
 pub struct TransportSerial {
 
@@ -111,8 +72,6 @@ impl TransportSerial {
 }
 
 impl Transport for TransportSerial {
-    type TConnection = TransportSerialConnection;
-
     fn detect_endpoints(&self) -> Result<Vec<super::TransportEndpoint>, FractalCoreError> {
         let ports = detect_serial_ports();
         let endpoints = ports.iter().map(|p| TransportEndpoint {
@@ -122,62 +81,67 @@ impl Transport for TransportSerial {
         Ok(endpoints)
     }
 
-    fn connect(&self, endpoint: &super::TransportEndpoint) -> Result<Self::TConnection, FractalCoreError> {
-        let mut port = serial::open(&endpoint.id)?;
-    
-        port.reconfigure(&|settings| {
-            settings.set_baud_rate(serial::Baud9600)?;
-            settings.set_char_size(serial::Bits8);
-            settings.set_parity(serial::ParityNone);
-            settings.set_stop_bits(serial::Stop1);
-            settings.set_flow_control(serial::FlowNone);
-            Ok(())
-        })?;
+    fn connect(&self, endpoint: &super::TransportEndpoint) -> Result<Box<dyn TransportConnection>, FractalCoreError> {
+        let mut port = serialport::open(&endpoint.id)?;
+        let timeout = Duration::from_millis(100);
+        port.set_timeout(timeout)?;
 
-        port.set_timeout(Duration::from_millis(100))?;
-
-        let (serial_write_tx, serial_write_rx) = crossbeam_channel::unbounded::<TransportMessage>();
+        //let (serial_write_tx, serial_write_rx) = crossbeam_channel::unbounded::<TransportMessage>();
         let (serial_read_tx, serial_read_rx) = crossbeam_channel::unbounded();
 
-        let io_thread = std::thread::spawn(move || {
-            loop {
-                let t = Duration::from_millis(5);
+        let stop = Arc::new(Mutex::new(false));
 
-                if let Ok(msg) = serial_write_rx.recv_timeout(t) {
-                    port.write(&msg);
-                }
+        let read_thread = {
+            let mut port = port.try_clone()?;
+            let mut stop = stop.clone();
+            std::thread::spawn(move || {
+                let mut buffer = [0; 512];
+                loop {
+                    match port.read(&mut buffer) {
+                        Ok(bytes) => {
+                            match serial_read_tx.send(buffer[0..bytes].to_vec()) {
+                                Ok(_) => (),
+                                Err(e) => {
+                                    eprintln!("Sending from TX: {:?}", e);
+                                }
+                            }
+                        }
+                        Err(ref e) if e.kind() == io::ErrorKind::TimedOut => (),
+                        Err(e) => {
+                            eprintln!("{:?}", e);
+                            if let Ok(mut stop) = stop.lock() {
+                                *stop = true;
+                            }
+                        }
+                    }
 
-                let mut buf = [0;512];
-                match port.read(&mut buf) {
-                    Ok(len) => {
-                        serial_read_tx.send(buf[0..len].to_vec());
-                    },
-                    Err(e) if e.kind() == ErrorKind::TimedOut => {
-
-                    },
-                    Err(e) => {
-                        println!("some error: {:?}", e);
+                    if let Ok(stop) = stop.try_lock() {
+                        if *stop == true {
+                            break;
+                        }
                     }
                 }
-            }
-        });
 
-        Ok(TransportSerialConnection {
-            serial_write_tx,
+                println!("shutdown read thread");
+            })
+        };
+
+        Ok(Box::new(TransportSerialConnection {
+            port,
             serial_read_rx,
-            io_thread
-        })
+            stop
+        }))
     }
 
-    fn id() -> String {
+    fn id(&self) -> String {
         "serial".into()
     }
 }
 
 pub struct TransportSerialConnection {
-    serial_write_tx: Sender<TransportMessage>,
+    port: Box<dyn SerialPort>,
     serial_read_rx: Receiver<TransportMessage>,
-    io_thread: JoinHandle<()>
+    stop: Arc<Mutex<bool>>
 }
 
 impl TransportConnection for TransportSerialConnection {
@@ -185,8 +149,17 @@ impl TransportConnection for TransportSerialConnection {
         &self.serial_read_rx
     }
 
-    fn get_sender(&self) -> &crossbeam_channel::Sender<Vec<u8>> {
-        &self.serial_write_tx
+    fn write(&mut self, buf: &[u8]) -> FractalResultVoid {
+        self.port.write(buf)?;
+        Ok(())
+    }
+}
+
+impl Drop for TransportSerialConnection {
+    fn drop(&mut self) {
+        if let Ok(mut stop) = self.stop.lock() {
+            *stop = true;
+        }
     }
 }
 
@@ -207,13 +180,14 @@ fn list_serial_ports() {
 */
 
 #[test]
-fn transport() -> Result<(), FractalCoreError> {
+#[ignore]
+fn serial_test() -> Result<(), FractalCoreError> {
     let serial_transport = TransportSerial::new();
     let endpoints = serial_transport.detect_endpoints()?;
     println!("endpoints: {:?}", endpoints);
 
-    let connection = serial_transport.connect(&endpoints[0])?;
-    connection.get_sender().send(b"ABC".to_vec()).unwrap();
+    let mut connection = serial_transport.connect(&endpoints[0])?;
+    connection.write(b"ABC").unwrap();
     let received = connection.get_receiver().recv().unwrap();
     println!("received: {:?}", received);
 

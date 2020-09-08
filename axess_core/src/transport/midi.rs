@@ -1,9 +1,10 @@
 use crate::FractalCoreError;
-use ::fractal_protocol::{common::wrap_msg, model::{FractalDevice, FractalModel}};
+use ::fractal_protocol::{model::{FractalModel}};
 
-use midir::{MidiInput, MidiOutput, Ignore, MidiInputPort, MidiOutputPort, MidiInputConnection, MidiOutputConnection};
+use midir::{MidiInput, MidiOutput, Ignore, MidiInputConnection, MidiOutputConnection};
 use log::{trace};
-use std::time::Duration;
+use super::{TransportMessage, Transport, TransportConnection};
+use crossbeam_channel::Receiver;
 
 pub struct Midi {
     client_name: String
@@ -33,45 +34,6 @@ impl Midi {
         trace!("Detected MIDI ports: {:?}", ports);
 
         Ok(ports)
-    }
-
-    pub fn connect_to<T: Send, TFnCallback: 'static + Fn(&[u8], &mut T) + Send>(&self, input_port_name: &str, output_port_name: &str, callback: TFnCallback, callback_ctx: T) 
-        -> Result<MidiConnection<T>, FractalCoreError>
-    {
-        
-        let mut midi_in = MidiInput::new(&format!("{} input", &self.client_name))?;
-        midi_in.ignore(Ignore::None);
-        let midi_out = MidiOutput::new(&format!("{} output", &self.client_name))?;
-
-        let midi_in_ports = midi_in.ports();
-        let midi_out_ports = midi_out.ports();
-
-        let midi_in_port = midi_in_ports.into_iter().find(|p| midi_in.port_name(p).ok().map(|n| &n == input_port_name).unwrap_or(false));
-        let midi_out_port = midi_out_ports.into_iter().find(|p| midi_out.port_name(p).ok().map(|n| &n == output_port_name).unwrap_or(false));
-
-        match (midi_in_port, midi_out_port) {
-            (Some(midi_in_port), Some(midi_out_port)) => {
-                trace!("Matched the MIDI ports");
-
-                let in_connection = midi_in.connect(&midi_in_port, &format!("{} Axess In", &self.client_name), move |stamp, message, data| {
-                    trace!("MIDI input: {}: {:x?} (len = {})", stamp, message, message.len());
-                    callback(message, data);
-                }, callback_ctx)?;
-
-                let mut out_connection = midi_out.connect(&midi_out_port, &format!("{} Axess Out", &self.client_name))?;
-
-                trace!("MIDI connection initialized");
-
-                return Ok(MidiConnection {
-                    input: in_connection,
-                    output: out_connection
-                });
-            },
-            _ => {
-                trace!("Midi ports to connect not found!");
-                return Err(FractalCoreError::Unknown);
-            }
-        }
     }
 }
 #[derive(Debug, Clone)]
@@ -122,7 +84,90 @@ pub struct MidiConnectionDeviceRequest {
     pub fractal_model: Option<FractalModel>
 }
 
-pub struct MidiConnection<T: 'static> {
-    pub input: MidiInputConnection<T>,
-    pub output: MidiOutputConnection
+pub struct MidiConnection {
+    pub input: MidiInputConnection<()>,
+    pub output: MidiOutputConnection,
+    rx: Receiver<TransportMessage>
+}
+
+
+impl Transport for Midi {
+    //type TConnection = MidiConnection;
+
+    fn id(&self) -> String {
+        "midi".into()
+    }
+
+    fn detect_endpoints(&self) -> Result<Vec<super::TransportEndpoint>, FractalCoreError> {
+        let ports = self.detect_midi_ports()?;
+        let devices = ports.detect_fractal_devices();
+        let res = devices.into_iter().map(|d| {
+            super::TransportEndpoint {
+                id: format!("{}||{}", d.input_port_name, d.output_port_name),
+                name: if let Some(fractal_model) = d.fractal_model {
+                    format!("{}", fractal_model)
+                } else {
+                    format!("{} / {}", d.input_port_name, d.output_port_name)
+                }
+            }
+        }).collect();
+        Ok(res)
+    }
+
+    fn connect(&self, endpoint: &super::TransportEndpoint) -> Result<Box<dyn TransportConnection>, FractalCoreError> {
+        let split = endpoint.id.split("||").collect::<Vec<_>>();
+        if let (Some(input_port_name), Some(output_port_name)) = (split.get(0), split.get(1)) {
+
+            let mut midi_in = MidiInput::new(&format!("{} input", &self.client_name))?;
+            midi_in.ignore(Ignore::None);
+            let midi_out = MidiOutput::new(&format!("{} output", &self.client_name))?;
+
+            let midi_in_ports = midi_in.ports();
+            let midi_out_ports = midi_out.ports();
+
+            let midi_in_port = midi_in_ports.into_iter().find(|p| midi_in.port_name(p).ok().map(|n| &n == input_port_name).unwrap_or(false));
+            let midi_out_port = midi_out_ports.into_iter().find(|p| midi_out.port_name(p).ok().map(|n| &n == output_port_name).unwrap_or(false));
+
+            match (midi_in_port, midi_out_port) {
+                (Some(midi_in_port), Some(midi_out_port)) => {
+                    trace!("Matched the MIDI ports");
+
+
+                    let (tx, rx) = crossbeam_channel::unbounded();
+
+                    let in_connection = midi_in.connect(&midi_in_port, &format!("{} Axess In", &self.client_name), move |stamp, message, data| {
+                        trace!("MIDI input: {}: {:x?} (len = {})", stamp, message, message.len());
+                        tx.send(message.to_vec());
+                    }, ())?;
+
+                    let mut out_connection = midi_out.connect(&midi_out_port, &format!("{} Axess Out", &self.client_name))?;
+
+                    trace!("MIDI connection initialized");
+
+                    return Ok(Box::new(MidiConnection {
+                        input: in_connection,
+                        output: out_connection,
+                        rx
+                    }));
+                },
+                _ => {
+                    trace!("Midi ports to connect not found!");
+                    return Err(FractalCoreError::Unknown);
+                }
+            }
+        } else {
+            Err(FractalCoreError::Other("Split error?".into()))
+        }
+    }
+}
+
+impl TransportConnection for MidiConnection {
+    fn get_receiver(&self) -> &Receiver<TransportMessage> {
+        &self.rx
+    }
+
+    fn write(&mut self, buf: &[u8]) -> crate::FractalResultVoid {
+        self.output.send(buf)?;
+        Ok(())
+    }
 }

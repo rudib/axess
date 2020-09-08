@@ -3,7 +3,7 @@ use nwg::{ComboBox, NativeUi};
 
 use std::{cell::RefCell, sync::{Mutex, Arc}};
 
-use axess_core::{payload::{PayloadConnection, UiPayload, ConnectToMidiPorts}};
+use axess_core::{payload::{PayloadConnection, UiPayload}, transport::Endpoint};
 use super::common::{FractalWindow, WindowApi};
 use crate::windows::connect::connect_window_ui::ConnectWindowUi;
 
@@ -22,29 +22,21 @@ pub struct ConnectWindow {
     grid: nwg::GridLayout,
 
 
-    #[nwg_control(text: "MIDI Input", h_align: HTextAlign::Left)]
+    #[nwg_control(text: "Port", h_align: HTextAlign::Left)]
     #[nwg_layout_item(layout: grid, row: 0, col: 0)]
-    label_midi_input: nwg::Label,
+    label_port: nwg::Label,
 
     #[nwg_control()]
     #[nwg_layout_item(layout: grid, row: 1, col: 0)]
-    midi_input: nwg::ComboBox<String>,
-
-    #[nwg_control(text: "MIDI Output", h_align: HTextAlign::Left)]
-    #[nwg_layout_item(layout: grid, row: 2, col: 0)]
-    label_midi_output: nwg::Label,
-
-    #[nwg_control()]
-    #[nwg_layout_item(layout: grid, row: 3, col: 0)]
-    midi_output: nwg::ComboBox<String>,
-
+    port: nwg::ComboBox<String>,
 
     #[nwg_control(text: "&Connect")]
-    #[nwg_layout_item(layout: grid, row: 4, col: 0, row_span: 2)]
+    #[nwg_layout_item(layout: grid, row: 2, col: 0)]
     #[nwg_events( OnButtonClick: [ConnectWindow::connect] )]
     connect_button: nwg::Button,
 
-    ui_api: Option<WindowApi>
+    ui_api: Option<WindowApi>,
+    endpoints: RefCell<Vec<Endpoint>>
 }
 
 impl FractalWindow for ConnectWindow {
@@ -68,14 +60,15 @@ impl FractalWindow for ConnectWindow {
 
 impl ConnectWindow {
     fn connect(&self) {        
-        self.send(UiPayload::Connection(PayloadConnection::ConnectToMidiPorts(ConnectToMidiPorts {
-            input_port: self.midi_input.selection_string().unwrap(),
-            output_port: self.midi_output.selection_string().unwrap()
-        })))
+        if let Some(idx) = self.port.selection() {
+            if let Some(endpoint) = self.endpoints.borrow().get(idx) {
+                self.send(UiPayload::Connection(PayloadConnection::ConnectToEndpoint(endpoint.clone())));
+            }
+        }
     }
 
     fn init(&self) {
-        self.send(UiPayload::Connection(PayloadConnection::ListMidiPorts))
+        self.send(UiPayload::Connection(PayloadConnection::ListEndpoints))
     }
     
     fn backend_response(&self) {
@@ -84,30 +77,20 @@ impl ConnectWindow {
         let msg = self.recv();
    
         match msg {
-            Some(UiPayload::Connection(PayloadConnection::DetectedMidiPorts { ports })) => {
-                
-                let set_ports = |dropdown: &ComboBox<String>, ports: &Vec<String>| {
-                    let len = ports.len();
-                    if len == 0 {
-                        dropdown.set_collection(vec!["None found!".to_string()]);
-                        //dropdown.set_selection(Some(0));
-                        dropdown.set_enabled(false);
-                    } else {
-                        dropdown.set_enabled(true);
-                        dropdown.set_collection(ports.to_vec());
-                        dropdown.set_selection(Some(0));
-                    }
-                };
-                
-                set_ports(&self.midi_input, &ports.inputs);
-                set_ports(&self.midi_output, &ports.outputs);
+            Some(UiPayload::Connection(PayloadConnection::DetectedEndpoints { endpoints })) => {
 
-                let detected = ports.detect_fractal_devices();
-                if let Some(device ) = detected.first() {
-                    self.midi_input.set_selection_string(&device.input_port_name);
-                    self.midi_output.set_selection_string(&device.output_port_name);
+                let len = endpoints.len();
+                if len == 0 {
+                    self.port.set_collection(vec!["None found!".to_string()]);
+                    //dropdown.set_selection(Some(0));
+                    self.port.set_enabled(false);
+                } else {
+                    self.port.set_enabled(true);
+                    self.port.set_collection(endpoints.iter().map(|e| e.transport_endpoint.name.clone()).collect());
+                    self.port.set_selection(Some(0));
                 }
 
+                *self.endpoints.borrow_mut() = endpoints;
             },
             Some(UiPayload::Connection(PayloadConnection::Connected { .. })) => {
                 self.on_exit();

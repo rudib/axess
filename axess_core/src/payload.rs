@@ -1,5 +1,5 @@
 
-use crate::transport::midi::MidiPorts;
+use crate::transport::{TransportEndpoint, midi::MidiPorts, Endpoint};
 use crate::FractalCoreError;
 
 #[derive(Debug, Clone)]
@@ -16,11 +16,11 @@ pub enum UiPayload {
 
 #[derive(Debug, Clone)]
 pub enum PayloadConnection {
-    ListMidiPorts,
-    DetectedMidiPorts {
-        ports: MidiPorts
+    ListEndpoints,
+    DetectedEndpoints {
+        endpoints: Vec<Endpoint>
     },
-    ConnectToMidiPorts(ConnectToMidiPorts),
+    ConnectToEndpoint(Endpoint),
 
     TryToAutoConnect,
     AutoConnectDeviceNotFound,
@@ -35,11 +35,13 @@ pub enum PayloadConnection {
     Disconnected    
 }
 
+/*
 #[derive(Debug, Clone)]
 pub struct ConnectToMidiPorts {
     pub input_port: String,
     pub output_port: String
 }
+*/
 #[derive(Debug, Clone)]
 pub enum DeviceState {
     PresetAndScene(PresetAndScene),
