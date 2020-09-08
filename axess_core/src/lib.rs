@@ -9,6 +9,7 @@ pub mod utils;
 pub mod payload;
 pub mod midi;
 pub mod backend;
+pub mod transport;
 
 pub use base::*;
 
