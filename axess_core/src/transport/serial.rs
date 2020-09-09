@@ -11,7 +11,7 @@ use std::{time::Duration, io::{Read, Write, self}, sync::{Mutex, Arc}};
 use super::{TransportConnection, Transport, TransportEndpoint, TransportMessage};
 use crossbeam_channel::{Receiver};
 use serialport::SerialPort;
-use log::error;
+use log::{error, trace};
 
 #[derive(Debug, Clone)]
 pub struct DetectedSerialPort {
@@ -110,7 +110,7 @@ impl Transport for TransportSerial {
 
     fn connect(&self, endpoint: &super::TransportEndpoint) -> Result<Box<dyn TransportConnection>, FractalCoreError> {
         let mut port = serialport::open(&endpoint.id)?;
-        let timeout = Duration::from_millis(100);
+        let timeout = Duration::from_millis(50);
         port.set_timeout(timeout)?;
 
         //let (serial_write_tx, serial_write_rx) = crossbeam_channel::unbounded::<TransportMessage>();
@@ -122,20 +122,20 @@ impl Transport for TransportSerial {
             let mut port = port.try_clone()?;
             let mut stop = stop.clone();
             std::thread::spawn(move || {
-                let mut buffer = [0; 512];
+                let mut buffer = [0; 1];
                 loop {
                     match port.read(&mut buffer) {
                         Ok(bytes) => {
                             match serial_read_tx.send(buffer[0..bytes].to_vec()) {
                                 Ok(_) => (),
                                 Err(e) => {
-                                    eprintln!("Sending from TX: {:?}", e);
+                                    eprintln!("Serial port read sending to channel failure: {:?}", e);
                                 }
                             }
                         }
                         Err(ref e) if e.kind() == io::ErrorKind::TimedOut => (),
                         Err(e) => {
-                            eprintln!("{:?}", e);
+                            eprintln!("Serial port read failure: {:?}", e);
                             if let Ok(mut stop) = stop.lock() {
                                 *stop = true;
                             }
@@ -184,6 +184,7 @@ impl TransportConnection for TransportSerialConnection {
 
 impl Drop for TransportSerialConnection {
     fn drop(&mut self) {
+        trace!("Dropping serial connection");
         if let Ok(mut stop) = self.stop.lock() {
             *stop = true;
         }
