@@ -110,7 +110,7 @@ impl Transport for TransportSerial {
 
     fn connect(&self, endpoint: &super::TransportEndpoint) -> Result<Box<dyn TransportConnection>, FractalCoreError> {
         let mut port = serialport::open(&endpoint.id)?;
-        let timeout = Duration::from_millis(50);
+        let timeout = Duration::from_millis(100);
         port.set_timeout(timeout)?;
 
         //let (serial_write_tx, serial_write_rx) = crossbeam_channel::unbounded::<TransportMessage>();
@@ -126,16 +126,20 @@ impl Transport for TransportSerial {
                 loop {
                     match port.read(&mut buffer) {
                         Ok(bytes) => {
-                            match serial_read_tx.send(buffer[0..bytes].to_vec()) {
-                                Ok(_) => (),
+                            let buffer = &buffer[0..bytes];
+                            //trace!("serial read {:x?}", buffer);
+                            match serial_read_tx.send(buffer.to_vec()) {
+                                Ok(_) => {
+                                    //trace!("serial read sent");
+                                },
                                 Err(e) => {
-                                    eprintln!("Serial port read sending to channel failure: {:?}", e);
+                                    error!("Serial port read sending to channel failure: {:?}", e);
                                 }
                             }
                         }
                         Err(ref e) if e.kind() == io::ErrorKind::TimedOut => (),
                         Err(e) => {
-                            eprintln!("Serial port read failure: {:?}", e);
+                            error!("Serial port read failure: {:?}", e);
                             if let Ok(mut stop) = stop.lock() {
                                 *stop = true;
                             }
@@ -144,12 +148,13 @@ impl Transport for TransportSerial {
 
                     if let Ok(stop) = stop.try_lock() {
                         if *stop == true {
+                            trace!("serial stop mutex");
                             break;
                         }
                     }
                 }
 
-                println!("shutdown read thread");
+                trace!("shutdown serial read thread");
             })
         };
 
@@ -177,6 +182,7 @@ impl TransportConnection for TransportSerialConnection {
     }
 
     fn write(&mut self, buf: &[u8]) -> FractalResultVoid {
+        trace!("Writing to serial port: {:X?}", buf);
         self.port.write(buf)?;
         Ok(())
     }

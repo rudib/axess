@@ -1,7 +1,7 @@
 use std::{thread, cell::RefCell, sync::{Mutex, Arc}, ops::Deref, any::type_name};
 use axess_core::{payload::UiPayload, backend::UiApi};
 use futures::executor::block_on;
-use nwg::{NwgError, NativeUi};
+use nwg::{NativeUi};
 
 pub trait FractalWindow {
     type Data;
@@ -28,7 +28,7 @@ pub trait FractalWindow {
         self.get_window_api().as_ref().expect("should be initialized")
     }
 
-    fn spawn(data: Self::Data, api: WindowApi) -> std::result::Result<std::thread::JoinHandle<()>, std::io::Error> {
+    fn spawn(_data: Self::Data, api: WindowApi) -> std::result::Result<std::thread::JoinHandle<()>, std::io::Error> {
         thread::Builder::new()
             .name(format!("{} Main Thread", type_name::<Self::Window>()))
             .spawn(move || {

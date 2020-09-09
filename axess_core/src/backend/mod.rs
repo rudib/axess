@@ -166,7 +166,7 @@ impl UiBackend {
                     };
                 },
                 PendingAction::EndOfMessagesChannel => {
-                    println!("end of stream!");
+                    trace!("end of stream!");
                     break;
                 },
                 PendingAction::Poll => {
@@ -213,6 +213,7 @@ impl UiBackend {
                         self.on_connect();
                     },
                     Err(e) => {
+                        trace!("Connect failed: {:?}", e);
                         self.send(UiPayload::Connection(PayloadConnection::ConnectionFailed(e))).await?
                     }
                 }
@@ -301,29 +302,29 @@ impl UiBackend {
     }
 
     async fn connect(&mut self, endpoint: &Endpoint) -> FractalResult<ConnectedDevice> {
-        let timeout = Duration::from_millis(100);
+        let timeout = Duration::from_millis(200);
         
         let transport = self.transports.iter().find(|t| t.id() == endpoint.transport_id).ok_or(FractalCoreError::Other("Transport not found".into()))?;
         let mut connection = transport.connect(&endpoint.transport_endpoint)?;
 
-        let mut midi_messages = BroadcastChannel::new();
+        let mut midi_messages = BroadcastChannel::<FractalMessageWrapper>::new();
 
         {
             let receiver = connection.get_receiver().clone();
             let midi_messages = midi_messages.clone();
 
             thread::spawn(move || {
-                // todo: handle cases where messages are sent in multiple chunks
                 let mut buffer: Vec<u8> = Vec::new();
                 'l: loop {
                     if let Ok(msg) = receiver.recv() {
+                        //trace!("Received buffer extension: {:X?}", msg);
                         buffer.extend(msg);
 
                         // find the sysex message in the buffer
                         for i in 0..buffer.len() {
                             let header = [SYSEX_START, SYSEX_MANUFACTURER_BYTE1, SYSEX_MANUFACTURER_BYTE2, SYSEX_MANUFACTURER_BYTE3];
                             if buffer[i..].starts_with(&header) {
-                                for n in (i+header.len()).. {
+                                for n in (i+header.len())..buffer.len() {
                                     match buffer.get(n) {
                                         Some(f) if *f == SYSEX_END => {
                                             if let Some(msg) = validate_and_decode_message(&buffer[i..n+1]) {
@@ -339,21 +340,21 @@ impl UiBackend {
                                 }
                             }
                         }
+                        //trace!("nothing yet...");
 
                     } else {
+                        //trace!("buffer receive failed!");
                         break;
                     }
                 }
 
-                println!("stop bridge");
+                trace!("stop bridge");
             });
         }
 
         // send a message that should reply to us with the model
         connection.write(&wrap_msg(vec![0x7F, 0x00]))?;
-
-        // retrieve the model
-        
+        // retrieve the model        
         let model = filter_first(&mut midi_messages, |msg| {
             match msg.message {
                 FractalMessage::MultipurposeResponse { function_id, response_code} 
