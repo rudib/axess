@@ -11,6 +11,7 @@ use std::{time::Duration, io::{Read, Write, self}, sync::{Mutex, Arc}};
 use super::{TransportConnection, Transport, TransportEndpoint, TransportMessage};
 use crossbeam_channel::{Receiver};
 use serialport::SerialPort;
+use log::error;
 
 #[derive(Debug, Clone)]
 pub struct DetectedSerialPort {
@@ -22,30 +23,49 @@ pub struct DetectedSerialPort {
 fn detect_serial_ports() -> Vec<DetectedSerialPort> {
     use serde::Deserialize;
     use wmi::{COMLibrary, WMIConnection};
+    
+    fn wmi_detect() -> Result<Vec<DetectedSerialPort>, FractalCoreError> {
+        #[derive(Deserialize, Debug)]
+        struct Win32_SerialPort {
+            Name: String,
+            DeviceId: String,
+            Description: String
+        }
 
-    let mut ret = vec![];
-
-    #[derive(Deserialize, Debug)]
-    struct Win32_SerialPort {
-        Name: String,
-        DeviceId: String,
-        Description: String
+        let com_con = COMLibrary::new()?;
+        let wmi_con = WMIConnection::new(com_con.into())?;
+        let results = wmi_con.query::<Win32_SerialPort>()?;
+        
+        let ret = results.into_iter().map(|r| {
+            DetectedSerialPort {
+                name: r.Name,
+                port: r.DeviceId
+            }
+        }).collect();
+        Ok(ret)
     }
 
-    if let Ok(com_con) = COMLibrary::new() {
-        if let Ok(wmi_con) = WMIConnection::new(com_con.into()) {
-            if let Ok(results) = wmi_con.query::<Win32_SerialPort>() {
-                for r in results {
-                    ret.push(DetectedSerialPort {
-                        name: r.Name,
-                        port: r.DeviceId
-                    })
-                }
-            }
+    match wmi_detect() {
+        Ok(ret) => { return ret; }
+        Err(e) => {
+            error!("WMI port detection failed: {:?}", e);
         }
     }
 
-    ret
+    match serialport::available_ports() {
+        Ok(ret) => {
+            let ret = ret.iter().map(|p| DetectedSerialPort {
+                name: p.port_name.clone(),
+                port: p.port_name.clone()
+            }).collect();
+            return ret;
+        },
+        Err(e) => {
+            error!("serialport-rs port detection failed: {:?}", e);
+        }
+    }
+
+    vec![]
 }
 
 #[cfg(not(target_os="windows"))]
@@ -56,6 +76,13 @@ pub fn detect_serial_ports() -> Vec<SerialPort> {
 impl From<serialport::Error> for FractalCoreError {
     fn from(_: serialport::Error) -> Self {
         FractalCoreError::IoError
+    }
+}
+
+#[cfg(target_os="windows")]
+impl From<wmi::WMIError> for FractalCoreError {
+    fn from(e: wmi::WMIError) -> Self {
+        FractalCoreError::Other(format!("WMI Error: {:?}", e))
     }
 }
 
