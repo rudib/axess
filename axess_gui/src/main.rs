@@ -6,7 +6,7 @@ extern crate native_windows_derive as nwd;
 
 use windows::{common::{WindowApi, FractalWindow}, main::MainWindow};
 use log4rs::{append::console::{Target, ConsoleAppender}, config::{Appender, Config, Root}, append::file::FileAppender};
-use log::LevelFilter;
+use log::{LevelFilter, info};
 use axess_core::{FractalCoreError, backend::UiBackend};
 
 mod windows;
@@ -25,7 +25,9 @@ fn main() -> Result<(), FractalCoreError> {
                 .build(LevelFilter::Trace)
             ).unwrap();
         log4rs::init_config(config).unwrap();
-    }    
+    }
+
+    info!("Axess starting.");
 
     nwg::init().expect("Failed to init Native Windows GUI");
     nwg::Font::set_global_family("Segoe UI").expect("Failed to set default font");
