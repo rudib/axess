@@ -1,5 +1,5 @@
 use broadcaster::BroadcastChannel;
-use crate::{payload::{PayloadConnection, UiPayload}, FractalResult, FractalResultVoid, utils::filter_first};
+use crate::{payload::{PayloadConnection, UiPayload}, FractalResult, FractalResultVoid, utils::filter_first, transport::TransportEndpoint};
 use crate::transport::{Transport, midi::{MidiConnection, Midi}, TransportConnection, serial::TransportSerial, Endpoint};
 use fractal_protocol::{message::{FractalMessage, FractalMessageWrapper}, model::{model_code, FractalDevice}, message2::validate_and_decode_message, common::{disconnect_from_controller, wrap_msg, get_current_preset_name, get_firmware_version, get_current_scene_name, set_preset_number, set_scene_number}, functions::FractalFunction, message2::SYSEX_START, message2::SYSEX_MANUFACTURER_BYTE1, message2::SYSEX_MANUFACTURER_BYTE2, message2::SYSEX_MANUFACTURER_BYTE3, message2::SYSEX_END, buffer::MessagesBuffer};
 use std::{time::Duration, thread, pin::Pin};
@@ -182,35 +182,36 @@ impl UiBackend {
         Ok(())
     }
 
+    fn list_endpoints(&self) -> Vec<Endpoint> {
+        let mut detected_endpoints = vec![];
+
+        for transport in &self.transports {
+            if let Ok(endpoints) = transport.detect_endpoints() {
+                for endpoint in endpoints {
+                    detected_endpoints.push(Endpoint {
+                        transport_id: transport.id().clone(),
+                        transport_endpoint: endpoint
+                    });
+                }
+            }
+        }
+
+        detected_endpoints
+    }
+
     async fn connection(&mut self, msg: PayloadConnection) -> FractalResultVoid {
+
         match msg {
             PayloadConnection::ListEndpoints => {
-                let mut detected_endpoints = vec![];
-
-                for transport in &self.transports {
-                    if let Ok(endpoints) = transport.detect_endpoints() {
-                        for endpoint in endpoints {
-                            detected_endpoints.push(Endpoint {
-                                transport_id: transport.id().clone(),
-                                transport_endpoint: endpoint
-                            });
-                        }
-                    }
-                }
-
                 self.send(UiPayload::Connection(PayloadConnection::DetectedEndpoints {
-                    endpoints: detected_endpoints
+                    endpoints: self.list_endpoints()
                 })).await?;
             },
 
             PayloadConnection::ConnectToEndpoint(endpoint) => {
                 match self.connect(&endpoint).await {
-                    Ok(device) => {
-                        let info = device.device.clone();
-                        self.device = Some(device);
-                        self.send(UiPayload::Connection(PayloadConnection::Connected { device: info })).await?;
-                        self.send_device_state().await?;
-                        self.on_connect();
+                    Ok(device) => {                        
+                        self.on_connect(device).await?;
                     },
                     Err(e) => {
                         trace!("Connect failed: {:?}", e);
@@ -228,24 +229,23 @@ impl UiBackend {
                 self.on_disconnect();                
             }
 
-            /*
             PayloadConnection::TryToAutoConnect => {
-                let midi_ports = self.midi.detect_midi_ports()?;
-                let fractal_devices = midi_ports.detect_fractal_devices();
-                trace!("Detected Fractal Devices: {:?}", &fractal_devices);
 
-                if fractal_devices.len() == 1 {
-                    trace!("Found a single device. Will try to connect.");
-                    let fractal_device = fractal_devices.first().unwrap();
-                    self.send(UiPayload::Connection(PayloadConnection::ConnectToMidiPorts(ConnectToMidiPorts {
-                        input_port: fractal_device.input_port_name.clone(),
-                        output_port: fractal_device.output_port_name.clone()                  
-                    }))).await?;
-                } else {
-                    self.send(UiPayload::Connection(PayloadConnection::AutoConnectDeviceNotFound)).await?;
+                let endpoints = self.list_endpoints();
+                for endpoint in endpoints {
+                    match self.connect(&endpoint).await {
+                        Ok(device) => {
+                            self.on_connect(device).await?;
+                            return Ok(())
+                        },
+                        Err(e) => {
+                            trace!("Probing failed on port {:?}. Error {:?}", endpoint, e)
+                        }
+                    }
                 }
+
+                self.send(UiPayload::Connection(PayloadConnection::AutoConnectDeviceNotFound)).await?;
             },
-            */
 
             _ => {}
         }
@@ -292,8 +292,13 @@ impl UiBackend {
         Ok(())
     }
 
-    fn on_connect(&mut self) {
+    async fn on_connect(&mut self, device: ConnectedDevice) -> FractalResultVoid {
+        let info = device.device.clone();
+        self.device = Some(device);
+        self.send(UiPayload::Connection(PayloadConnection::Connected { device: info })).await?;
+        self.send_device_state().await?;
         self.status_poller = Box::pin(tokio::time::interval(Duration::from_millis(1000)));
+        Ok(())
         
     }
 

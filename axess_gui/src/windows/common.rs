@@ -2,6 +2,7 @@ use std::{thread, cell::RefCell, sync::{Mutex, Arc}, ops::Deref, any::type_name}
 use axess_core::{payload::UiPayload, backend::UiApi};
 use futures::executor::block_on;
 use nwg::{NativeUi};
+use log::trace;
 
 pub trait FractalWindow {
     type Data;
@@ -64,6 +65,7 @@ pub trait FractalWindow {
                         }
                     }
                     drop(api);
+                    trace!("Stopped thread for Window {}", type_name::<Self::Window>());
                 }).unwrap();
             }
 

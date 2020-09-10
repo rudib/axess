@@ -125,8 +125,8 @@ impl MainWindow {
     }
 
     fn init(&self) {
-        //self.send(UiPayload::Connection(PayloadConnection::TryToAutoConnect));        
         self.main_controls_when_connected(false);
+        self.send(UiPayload::Connection(PayloadConnection::TryToAutoConnect));        
     }
 
     fn connect(&self) {

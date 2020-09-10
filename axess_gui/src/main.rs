@@ -6,7 +6,7 @@ extern crate native_windows_derive as nwd;
 
 use windows::{common::{WindowApi, FractalWindow}, main::MainWindow};
 use log4rs::{append::console::{Target, ConsoleAppender}, config::{Appender, Config, Root}, append::file::FileAppender};
-use log::{LevelFilter, info};
+use log::{LevelFilter, info, trace};
 use axess_core::{FractalCoreError, backend::UiBackend};
 
 mod windows;
@@ -37,6 +37,8 @@ fn main() -> Result<(), FractalCoreError> {
 
     let main_window_thread = MainWindow::spawn((), window_api).unwrap();
     main_window_thread.join().unwrap();
+
+    trace!("Stop.");
 
     Ok(())
 }
