@@ -167,6 +167,7 @@ impl TransportConnection for MidiConnection {
     }
 
     fn write(&mut self, buf: &[u8]) -> crate::FractalResultVoid {
+        trace!("Writing to MIDI port: {:X?}", &buf);
         self.output.send(buf)?;
         Ok(())
     }

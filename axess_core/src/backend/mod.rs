@@ -1,4 +1,6 @@
 use broadcaster::BroadcastChannel;
+use connected_device::ConnectedDevice;
+use state::DeviceState;
 use crate::{payload::{PayloadConnection, UiPayload}, FractalResult, FractalResultVoid, utils::filter_first, transport::TransportEndpoint};
 use crate::transport::{Transport, midi::{MidiConnection, Midi}, TransportConnection, serial::TransportSerial, Endpoint};
 use fractal_protocol::{message::{FractalMessage, FractalMessageWrapper}, model::{model_code, FractalDevice}, message2::validate_and_decode_message, common::{disconnect_from_controller, wrap_msg, get_current_preset_name, get_firmware_version, get_current_scene_name, set_preset_number, set_scene_number}, functions::FractalFunction, message2::SYSEX_START, message2::SYSEX_MANUFACTURER_BYTE1, message2::SYSEX_MANUFACTURER_BYTE2, message2::SYSEX_MANUFACTURER_BYTE3, message2::SYSEX_END, buffer::MessagesBuffer};
@@ -8,6 +10,9 @@ use tokio::runtime::Runtime;
 use tokio::stream::{pending, Stream};
 use futures::{executor::block_on, StreamExt, future::{self, Either}};
 use crate::FractalCoreError;
+
+mod connected_device;
+mod state;
 
 #[derive(Clone)]
 pub struct UiApi {
@@ -21,66 +26,8 @@ pub struct UiBackend {
     status_poller: Pin<Box<dyn Stream<Item = tokio::time::Instant>>>
 }
 
-struct ConnectedDevice {
-    transport_endpoint: Box<dyn TransportConnection>,
-    device: FractalDevice,
-    midi_messages: BroadcastChannel<FractalMessageWrapper>,
-    state: DeviceState,
-    //midi_channel: u8
-}
 
-impl ConnectedDevice {
-    async fn update_state(&mut self) -> FractalResult<bool> {
-        let timeout = Duration::from_millis(500);
 
-        let channel = self.midi_messages.clone();
-
-        self.transport_endpoint.write(&get_current_preset_name(self.device.model))?;
-        self.transport_endpoint.write(&get_current_scene_name(self.device.model))?;
-
-        let mut device_state = DeviceState::default();
-
-        let scan = channel
-            .scan(0 as u32, |state, msg| {
-                match &msg.message {
-                    FractalMessage::PresetName(preset_number, preset_name) => {
-                        device_state.preset_number = *preset_number;
-                        device_state.preset_name = preset_name.clone();
-                        *state += 1;
-                    },
-                    FractalMessage::SceneName(scene, name) => {
-                        device_state.scene_number = *scene;
-                        device_state.scene_name = name.clone();
-                        *state += 1;
-                    },
-                    _ => ()
-                }
-
-                future::ready(if *state < 2 { Some(msg) } else { None })
-            });
-        
-        let t = tokio::time::timeout(timeout, scan.collect::<Vec<_>>()).await;
-        if t.is_err() {
-            return Err(FractalCoreError::Timeout);
-        }
-
-        if device_state != self.state {
-            self.state = device_state;
-            
-            return Ok(true);
-        }
-
-        Ok(false)
-    }
-}
-
-#[derive(Default, Debug, Clone, Eq, PartialEq)]
-struct DeviceState {
-    preset_number: u32,
-    preset_name: String,
-    scene_number: u8,
-    scene_name: String
-}
 
 impl UiBackend {    
     pub fn spawn() -> FractalResult<UiApi> {
@@ -298,8 +245,7 @@ impl UiBackend {
         self.send(UiPayload::Connection(PayloadConnection::Connected { device: info })).await?;
         self.send_device_state().await?;
         self.status_poller = Box::pin(tokio::time::interval(Duration::from_millis(1000)));
-        Ok(())
-        
+        Ok(())        
     }
 
     fn on_disconnect(&mut self) {
@@ -394,7 +340,12 @@ impl UiBackend {
             state: DeviceState::default()
         };
         
-        connected_device.update_state().await?;
+        match connected_device.update_state().await {
+            Ok(_) => (),
+            Err(e) => {
+                error!("Failed to update the state from the freshly connected device: {:?}", e);
+            }
+        }
 
         Ok(connected_device)
     }
