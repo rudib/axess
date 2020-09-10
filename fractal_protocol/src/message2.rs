@@ -10,6 +10,8 @@ pub const SYSEX_MANUFACTURER_BYTE2: u8 = 0x01;
 pub const SYSEX_MANUFACTURER_BYTE3: u8 = 0x74;
 pub const SYSEX_END: u8 = 0xF7;
 
+pub const SYSEX_HEADER: [u8; 4] = [SYSEX_START, SYSEX_MANUFACTURER_BYTE1, SYSEX_MANUFACTURER_BYTE2, SYSEX_MANUFACTURER_BYTE3];
+
 pub fn validate_and_decode_message(msg: &[u8]) -> Option<FractalMessageWrapper> {
     let mut valid_msg = false;
 

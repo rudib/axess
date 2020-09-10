@@ -1,7 +1,7 @@
 use broadcaster::BroadcastChannel;
 use crate::{payload::{PayloadConnection, UiPayload}, FractalResult, FractalResultVoid, utils::filter_first};
 use crate::transport::{Transport, midi::{MidiConnection, Midi}, TransportConnection, serial::TransportSerial, Endpoint};
-use fractal_protocol::{message::{FractalMessage, FractalMessageWrapper}, model::{model_code, FractalDevice}, message2::validate_and_decode_message, common::{disconnect_from_controller, wrap_msg, get_current_preset_name, get_firmware_version, get_current_scene_name, set_preset_number, set_scene_number}, functions::FractalFunction, message2::SYSEX_START, message2::SYSEX_MANUFACTURER_BYTE1, message2::SYSEX_MANUFACTURER_BYTE2, message2::SYSEX_MANUFACTURER_BYTE3, message2::SYSEX_END};
+use fractal_protocol::{message::{FractalMessage, FractalMessageWrapper}, model::{model_code, FractalDevice}, message2::validate_and_decode_message, common::{disconnect_from_controller, wrap_msg, get_current_preset_name, get_firmware_version, get_current_scene_name, set_preset_number, set_scene_number}, functions::FractalFunction, message2::SYSEX_START, message2::SYSEX_MANUFACTURER_BYTE1, message2::SYSEX_MANUFACTURER_BYTE2, message2::SYSEX_MANUFACTURER_BYTE3, message2::SYSEX_END, buffer::MessagesBuffer};
 use std::{time::Duration, thread, pin::Pin};
 use log::{error, trace};
 use tokio::runtime::Runtime;
@@ -314,36 +314,14 @@ impl UiBackend {
             let midi_messages = midi_messages.clone();
 
             thread::spawn(move || {
-                let mut buffer: Vec<u8> = Vec::new();
-                'l: loop {
+                let mut messages_buffer = MessagesBuffer::new();
+                loop {
                     if let Ok(msg) = receiver.recv() {
-                        //trace!("Received buffer extension: {:X?}", msg);
-                        buffer.extend(msg);
-
-                        // find the sysex message in the buffer
-                        for i in 0..buffer.len() {
-                            let header = [SYSEX_START, SYSEX_MANUFACTURER_BYTE1, SYSEX_MANUFACTURER_BYTE2, SYSEX_MANUFACTURER_BYTE3];
-                            if buffer[i..].starts_with(&header) {
-                                for n in (i+header.len())..buffer.len() {
-                                    match buffer.get(n) {
-                                        Some(f) if *f == SYSEX_END => {
-                                            if let Some(msg) = validate_and_decode_message(&buffer[i..n+1]) {
-                                                trace!("Received SYSEX message: {:?}", msg);
-                                                block_on(midi_messages.send(&msg)).unwrap();
-                                                buffer = buffer.into_iter().skip(i+(n-i)+1).collect();
-                                                continue 'l;
-                                            }
-                                            trace!("Failed to parsed SYSEX, entire buffer: {:X?}", &buffer);
-                                        }
-                                        _ => ()
-                                    }
-                                }
-                            }
+                        if let Some(msg) = messages_buffer.parse(&msg) {
+                            trace!("Received SYSEX message: {:?}", msg);
+                            block_on(midi_messages.send(&msg)).unwrap();
                         }
-                        //trace!("nothing yet...");
-
                     } else {
-                        //trace!("buffer receive failed!");
                         break;
                     }
                 }
