@@ -1,5 +1,5 @@
 
-
+#[derive(PrimitiveEnum, Clone, Copy, Debug, Eq, PartialEq)]
 pub enum FractalFunction {
     GET_CURRENT_PRESET_NUMBER = 0x14,
     SET_PRESET_NUMBER = 0x3C,

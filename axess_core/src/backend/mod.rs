@@ -3,13 +3,14 @@ use connected_device::ConnectedDevice;
 use state::DeviceState;
 use crate::{payload::{PayloadConnection, UiPayload}, FractalResult, FractalResultVoid, utils::filter_first, transport::TransportEndpoint};
 use crate::transport::{Transport, midi::{MidiConnection, Midi}, TransportConnection, serial::TransportSerial, Endpoint};
-use fractal_protocol::{message::{FractalMessage, FractalMessageWrapper}, model::{model_code, FractalDevice}, message2::validate_and_decode_message, common::{disconnect_from_controller, wrap_msg, get_current_preset_name, get_firmware_version, get_current_scene_name, set_preset_number, set_scene_number}, functions::FractalFunction, message2::SYSEX_START, message2::SYSEX_MANUFACTURER_BYTE1, message2::SYSEX_MANUFACTURER_BYTE2, message2::SYSEX_MANUFACTURER_BYTE3, message2::SYSEX_END, buffer::MessagesBuffer};
+use fractal_protocol::{message::{FractalMessage, FractalMessageWrapper}, model::{FractalDevice}, message2::validate_and_decode_message, common::{disconnect_from_controller, wrap_msg, get_current_preset_name, get_firmware_version, get_current_scene_name, set_preset_number, set_scene_number}, functions::FractalFunction, message2::SYSEX_START, message2::SYSEX_MANUFACTURER_BYTE1, message2::SYSEX_MANUFACTURER_BYTE2, message2::SYSEX_MANUFACTURER_BYTE3, message2::SYSEX_END, buffer::MessagesBuffer, structs::FractalCmd};
 use std::{time::Duration, thread, pin::Pin};
 use log::{error, trace};
 use tokio::runtime::Runtime;
 use tokio::stream::{pending, Stream};
 use futures::{executor::block_on, StreamExt, future::{self, Either}};
 use crate::FractalCoreError;
+use crate::packed_struct::{PrimitiveEnum, PackedStruct};
 
 mod connected_device;
 mod state;
@@ -298,7 +299,7 @@ impl UiBackend {
         trace!("Detected Fractal Model {:?}", model);
 
         // request the firmware version
-        connection.write(&get_firmware_version(model_code(model)))?;
+        connection.write(&FractalCmd::new(model, FractalFunction::GET_FIRMWARE_VERSION).pack())?;
 
         let firmware = filter_first(&mut midi_messages, |msg| {
             match msg.message {

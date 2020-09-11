@@ -1,11 +1,12 @@
 use std::time::Duration;
 
 use broadcaster::BroadcastChannel;
-use fractal_protocol::{model::FractalDevice, message::FractalMessageWrapper, message::FractalMessage, common::get_current_preset_name, common::get_current_scene_name};
+use fractal_protocol::{model::FractalDevice, message::FractalMessageWrapper, message::FractalMessage, common::get_current_preset_name, common::get_current_scene_name, structs::FractalCmd, functions::FractalFunction, structs::FractalCmdWithInt, structs::FractalInt};
 
 use crate::{transport::TransportConnection, FractalResult, utils::filter_first};
 use crate::FractalCoreError;
 use super::state::DeviceState;
+use crate::packed_struct::PackedStruct;
 
 pub struct ConnectedDevice {
     pub transport_endpoint: Box<dyn TransportConnection>,
@@ -33,7 +34,8 @@ impl ConnectedDevice {
     }
 
     pub async fn update_state(&mut self) -> FractalResult<bool> {
-        let (preset_number, preset_name) = self.send_and_wait_for(&get_current_preset_name(self.device.model),
+        let get_current_preset_cmd = FractalCmdWithInt::new(self.device.model, FractalFunction::TUNER_INFO, FractalInt::All);
+        let (preset_number, preset_name) = self.send_and_wait_for(&get_current_preset_cmd.pack(),
 |msg| {
                 match &msg.message {
                     FractalMessage::PresetName(preset_number, preset_name) => {

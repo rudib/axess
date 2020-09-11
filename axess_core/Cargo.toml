@@ -22,5 +22,7 @@ serde = "1.0"
 #serial = "0.4.0"
 serialport = "3.3"
 
+packed_struct = "0.3"
+
 [target.'cfg(windows)'.dependencies]
 wmi = "0.5"

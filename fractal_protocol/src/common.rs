@@ -1,4 +1,5 @@
-use crate::model::{model_code, FractalModel};
+use crate::model::{FractalModel};
+use crate::packed_struct::PrimitiveEnum;
 
 pub type MidiMessage = Vec<u8>;
 
@@ -70,9 +71,9 @@ pub fn wrap_msg(msg: MidiMessage) -> MidiMessage {
 pub fn get_current_preset_name(model: FractalModel) -> MidiMessage {
     // todo: test
     if model == FractalModel::III || model == FractalModel::FM3 {
-        wrap_msg(vec![model_code(model), 0x0D, 0x7F, 0x7F])
+        wrap_msg(vec![model.to_primitive(), 0x0D, 0x7F, 0x7F])
     } else {
-        wrap_msg(vec![model_code(model), 0x0F])
+        wrap_msg(vec![model.to_primitive(), 0x0F])
     }
 }
 
@@ -81,7 +82,7 @@ pub fn get_firmware_version(model_code: u8) -> MidiMessage {
 }
 
 pub fn disconnect_from_controller(model: FractalModel) -> MidiMessage {
-    wrap_msg(vec![model_code(model), 0x42])
+    wrap_msg(vec![model.to_primitive(), 0x42])
 }
 
 pub fn get_current_scene_name(model: FractalModel) -> MidiMessage {
@@ -89,12 +90,12 @@ pub fn get_current_scene_name(model: FractalModel) -> MidiMessage {
 }
 
 pub fn get_scene_name(model: FractalModel, scene: u8) -> MidiMessage {
-    wrap_msg(vec![model_code(model), 0x0E, scene])
+    wrap_msg(vec![model.to_primitive(), 0x0E, scene])
 }
 
 pub fn set_preset_number(model: FractalModel, n: u32) -> MidiMessage {
     let (a, b) = encode_preset_number(n);
-    wrap_msg(vec![model_code(model), 0x3C, a, b])
+    wrap_msg(vec![model.to_primitive(), 0x3C, a, b])
 }
 
 fn encode_preset_number(n: u32) -> (u8, u8) {
@@ -107,7 +108,7 @@ pub fn set_scene_number(model: FractalModel, scene_number: u8) -> MidiMessage {
     } else {
         0x29
     };
-    wrap_msg(vec![model_code(model), command, scene_number])
+    wrap_msg(vec![model.to_primitive(), command, scene_number])
 }
 
 
@@ -119,7 +120,7 @@ fn test_set_preset_number() {
             0x00,
             0x01,
             0x74,
-            model_code(FractalModel::II),
+            FractalModel::II.to_primitive(),
             0x3C,
             0,
             127,
@@ -134,7 +135,7 @@ fn test_set_preset_number() {
             0x00,
             0x01,
             0x74,
-            model_code(FractalModel::II),
+            FractalModel::II.to_primitive(),
             0x3C,
             1,
             0,

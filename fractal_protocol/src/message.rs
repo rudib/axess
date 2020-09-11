@@ -1,5 +1,6 @@
 use super::common::*;
 use super::model::*;
+use crate::packed_struct::PrimitiveEnum;
 
 #[derive(PartialEq, Debug, Clone)]
 pub enum FractalMessage {
@@ -63,7 +64,7 @@ pub fn parse_message(msg: &[u8]) -> FractalMessageWrapper {
     let model_raw = msg.get(4).cloned();
 
     let model: Option<FractalModel> = model_raw
-        .map(FractalModel::from_code)
+        .map(FractalModel::from_primitive)
         .unwrap_or(None);
 
     let function_id = msg.get(5);
