@@ -27,7 +27,7 @@ fn main() -> Result<(), FractalCoreError> {
         log4rs::init_config(config).unwrap();
     }
 
-    info!("Axess starting.");
+    info!("Axess starting. Git SHA {}", env!("VERGEN_SHA_SHORT"));
 
     nwg::init().expect("Failed to init Native Windows GUI");
     nwg::Font::set_global_family("Segoe UI").expect("Failed to set default font");

@@ -17,3 +17,6 @@ broadcaster="1.0"
 futures = "0.3"
 log = "0.4"
 log4rs = "0.13"
+
+[build-dependencies]
+vergen = "3"
