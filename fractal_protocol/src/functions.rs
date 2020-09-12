@@ -1,4 +1,5 @@
-
+#[allow(dead_code)]
+#[allow(non_camel_case_types)]
 #[derive(PrimitiveEnum, Clone, Copy, Debug, Eq, PartialEq)]
 pub enum FractalFunction {
     SET_PRESET_NUMBER = 0x3C,
@@ -6,7 +7,7 @@ pub enum FractalFunction {
     FRONT_PANEL_CHANGE_DETECTED = 0x21,
     DISCONNECT_FROM_CONTROLLER = 0x42,
     GET_MIDI_CHANNEL = 0x17,
-    TUNER_INFO = 0x0D,
+    PRESET_INFO = 0x0D,
     //PRESET_BLOCKS_DATA = 0x0E,
     GET_SCENE_NUMBER = 0x29,
     GET_SET_SCENE = 0x0C,

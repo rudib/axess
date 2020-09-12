@@ -7,6 +7,7 @@ pub mod functions;
 pub mod effect;
 
 pub mod structs;
+pub mod structs_types;
 
 extern crate packed_struct;
 #[macro_use]
