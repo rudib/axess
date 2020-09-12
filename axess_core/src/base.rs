@@ -10,6 +10,7 @@ quick_error! {
         MidirSendError(err: midir::SendError) { from() }
         IoError { }
         BroadcastError(val: String) { }
+        PackingError(err: packed_struct::PackingError) { from() }
     }
 }
 
