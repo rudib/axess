@@ -127,6 +127,43 @@ impl PackedStructSlice for DataVoid {
     }
 }
 
+pub struct Data<T1, T2>(T1, T2);
+impl<T1, T2> PackedStructSlice for Data<T1, T2> where T1: PackedStructSlice, T2: PackedStructSlice {
+    fn pack_to_slice(&self, output: &mut [u8]) -> Result<(), PackingError> {
+        if output.len() != Self::packed_bytes() { return Err(PackingError::BufferSizeMismatch { expected: Self::packed_bytes(), actual: output.len() }); }
+
+        let mut i = 0;
+
+        let n = T1::packed_bytes();
+        self.0.pack_to_slice(&mut output[i..(i+n)])?;
+        i += n;
+
+        let n = T2::packed_bytes();
+        self.1.pack_to_slice(&mut output[i..(i+n)])?;
+        i += n;
+
+        Ok(())
+    }
+
+    fn unpack_from_slice(src: &[u8]) -> Result<Self, PackingError> {
+        let mut i = 0;
+
+        let n = T1::packed_bytes();
+        let t1 = T1::unpack_from_slice(&src[i..(i+n)])?;
+        i += n;
+
+        let n = T2::packed_bytes();
+        let t2 = T2::unpack_from_slice(&src[i..(i+n)])?;
+        i += n;
+
+        Ok(Self(t1, t2))
+    }
+
+    fn packed_bytes() -> usize {
+        T1::packed_bytes() + T2::packed_bytes()
+    }
+}
+
 #[test]
 fn test_generics() {
     use super::FractalU7;
