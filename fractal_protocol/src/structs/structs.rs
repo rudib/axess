@@ -7,12 +7,12 @@ use packed_struct::{PrimitiveEnum, PackedStructSlice};
 
 use crate::{
     effect::EffectId, functions::FractalFunction, message2::SYSEX_END, message2::SYSEX_HEADER,
-    message2::SYSEX_MANUFACTURER, message2::SYSEX_START, model::FractalModel,
-structs_types::FractalHeader, structs_types::FractalFooter, structs_types::FractalU14, structs_types::FractalU7};
+    message2::SYSEX_MANUFACTURER, message2::SYSEX_START, model::FractalModel};
+
+use super::{FractalHeader, FractalFooter, FractalMessageChecksum, FractalU14, FractalU7, EffectStatus};
 
 
-
-#[derive(Debug, Copy, Clone, PackedStruct, PartialEq, Eq)]
+#[derive(Debug, Copy, Clone, PackedStruct, PartialEq)]
 pub struct FractalCmd {
     #[packed_field(element_size_bytes="5")]
     header: FractalHeader,
@@ -130,45 +130,8 @@ impl FractalMessageChecksum for FractalCmdWithU7 {
     }
 }
 
-pub trait FractalMessageChecksum {
-    fn get_footer(&self) -> &FractalFooter;
-    fn get_footer_mut(&mut self) -> &mut FractalFooter;
-    fn get_checksum_payload(&self) -> Vec<u8>;
 
-    fn prepare_checksum(&mut self) {
-        let crc = calc_checksum(&self.get_checksum_payload());
-        let mut footer = self.get_footer_mut();
-        footer.checksum = crc;
-    }
 
-    fn valid_checksum(&self) -> bool {
-        let crc_calculated = calc_checksum(&self.get_checksum_payload());
-        self.get_footer().checksum == crc_calculated
-    }
-}
-
-fn calc_checksum(sysex: &[u8]) -> u8 {
-    if sysex.len() < 2 {
-        return 0;
-    }
-
-    let mut sum = sysex[0];
-    for b in &sysex[1..] {
-        sum ^= *b;
-    }
-    sum & 0x7F
-}
-
-#[derive(Debug, Copy, Clone, PackedStruct)]
-#[packed_struct(bit_numbering = "msb0", size_bytes="3")]
-pub struct EffectStatus {
-    #[packed_field(element_size_bytes = "2")]
-    pub effect_id: FractalU14,
-    pub _padding: ReservedZero<packed_bits::Bits1>,
-    pub supported_channels: Integer<u8, packed_bits::Bits3>,
-    pub channel: Integer<u8, packed_bits::Bits3>,
-    pub is_bypassed: bool
-}
 
 #[test]
 fn test_pack_cmd_with_int() {

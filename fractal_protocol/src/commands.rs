@@ -1,4 +1,4 @@
-use crate::{model::FractalModel, structs::FractalCmdWithU14, functions::FractalFunction, structs_types::FractalU14, structs::FractalCmdWithU7};
+use crate::{model::FractalModel, structs::FractalCmdWithU14, functions::FractalFunction, structs::FractalCmdWithU7, structs::FractalU14, structs::FractalU7};
 
 pub struct Commands {
     model: FractalModel
@@ -16,7 +16,7 @@ impl Commands {
     }
 
     pub fn get_current_scene_info(&self) -> FractalCmdWithU7 {
-        FractalCmdWithU7::new(self.model, FractalFunction::GET_SCENE_NAME, 0x7F.into())
+        FractalCmdWithU7::new(self.model, FractalFunction::GET_SCENE_NAME, FractalU7::new_all())
     }
 }
 

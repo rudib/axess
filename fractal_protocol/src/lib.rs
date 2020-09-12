@@ -7,7 +7,6 @@ pub mod functions;
 pub mod effect;
 
 pub mod structs;
-pub mod structs_types;
 pub mod commands;
 
 extern crate packed_struct;

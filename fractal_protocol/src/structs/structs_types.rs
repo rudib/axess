@@ -96,6 +96,12 @@ pub struct FractalU7 {
     pub msb: Integer<u8, packed_bits::Bits7>
 }
 
+impl FractalU7 {
+    pub fn new_all() -> Self {
+        0x7F.into()
+    }
+}
+
 impl From<u8> for FractalU7 {
     fn from(n: u8) -> Self {
         FractalU7 {
