@@ -109,3 +109,21 @@ impl Into<u8> for FractalU7 {
         self.msb.into()
     }
 }
+
+#[derive(Debug, Copy, Clone, PackedStruct)]
+pub struct FractalString32 {
+    pub data: [u8; 32]
+}
+
+impl FractalString32 {
+    pub fn from_string(s: &str) -> Option<Self> {
+        panic!("todo");
+    }
+
+    pub fn try_as_string(&self) -> Option<String> {
+        let len = self.data.iter().take_while(|c| **c != 0 && c.is_ascii()).count();
+        let s = String::from_utf8_lossy(&self.data[..len]);
+        Some(s.into())
+    }
+}
+
