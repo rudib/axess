@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use broadcaster::BroadcastChannel;
-use fractal_protocol::{model::FractalDevice, message::FractalMessageWrapper, message::FractalMessage, common::get_current_preset_name, common::get_current_scene_name, structs::FractalCmd, functions::FractalFunction, structs::FractalCmdWithInt, structs::FractalInt};
+use fractal_protocol::{model::FractalDevice, message::FractalMessageWrapper, message::FractalMessage, common::get_current_preset_name, common::get_current_scene_name, structs::FractalCmd, functions::FractalFunction, structs::FractalCmdWithInt, structs::FractalInt, structs::FractalCmdWithByte};
 
 use crate::{transport::TransportConnection, FractalResult, utils::filter_first};
 use crate::FractalCoreError;
@@ -34,8 +34,8 @@ impl ConnectedDevice {
     }
 
     pub async fn update_state(&mut self) -> FractalResult<bool> {
-        let get_current_preset_cmd = FractalCmdWithInt::new(self.device.model, FractalFunction::TUNER_INFO, FractalInt::All);
-        let (preset_number, preset_name) = self.send_and_wait_for(&get_current_preset_cmd.pack(),
+        let cmd = FractalCmdWithInt::new(self.device.model, FractalFunction::TUNER_INFO, FractalInt::All);
+        let (preset_number, preset_name) = self.send_and_wait_for(&cmd.pack(),
 |msg| {
                 match &msg.message {
                     FractalMessage::PresetName(preset_number, preset_name) => {
@@ -45,7 +45,8 @@ impl ConnectedDevice {
                 }
             }).await.map_err(|_| FractalCoreError::MissingValue("Preset".into()))?;
 
-        let (scene_number, scene_name) = self.send_and_wait_for(&get_current_scene_name(self.device.model), 
+        let cmd = FractalCmdWithByte::new(self.device.model, FractalFunction::GET_SCENE_NAME, 0x7F);
+        let (scene_number, scene_name) = self.send_and_wait_for(&cmd.pack(), 
 |msg| {
                 match &msg.message {
                     FractalMessage::SceneName(scene, name) => {
