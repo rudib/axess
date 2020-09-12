@@ -1,7 +1,8 @@
 use std::time::Duration;
 
 use broadcaster::BroadcastChannel;
-use fractal_protocol::{model::FractalDevice, message::FractalMessageWrapper, message::FractalMessage, common::get_current_preset_name, common::get_current_scene_name, structs::FractalCmd, functions::FractalFunction, structs::FractalCmdWithU14, structs::FractalCmdWithU7, structs_types::FractalU14, structs_types::FractalU7};
+use fractal_protocol::{model::FractalDevice, message::FractalMessageWrapper, message::FractalMessage, common::get_current_preset_name, common::get_current_scene_name, structs::FractalCmd, functions::FractalFunction, structs::FractalCmdWithU14, structs::FractalCmdWithU7, structs_types::FractalU14, structs_types::FractalU7, commands::Commands};
+use log::trace;
 
 use crate::{transport::TransportConnection, FractalResult, utils::filter_first};
 use crate::FractalCoreError;
@@ -34,8 +35,9 @@ impl ConnectedDevice {
     }
 
     pub async fn update_state(&mut self) -> FractalResult<bool> {
-        let cmd = FractalCmdWithU14::new(self.device.model, FractalFunction::PRESET_INFO, FractalU14::new_all());
-        let (preset_number, preset_name) = self.send_and_wait_for(&cmd.pack(),
+        let commands = Commands::new(self.device.model);
+        
+        let (preset_number, preset_name) = self.send_and_wait_for(&commands.get_current_preset_info().pack(),
 |msg| {
                 match &msg.message {
                     FractalMessage::PresetName(preset_number, preset_name) => {
@@ -45,8 +47,7 @@ impl ConnectedDevice {
                 }
             }).await.map_err(|_| FractalCoreError::MissingValue("Preset".into()))?;
 
-        let cmd = FractalCmdWithU7::new(self.device.model, FractalFunction::GET_SCENE_NAME, 0x7F.into());
-        let (scene_number, scene_name) = self.send_and_wait_for(&cmd.pack(), 
+        let (scene_number, scene_name) = self.send_and_wait_for(&commands.get_current_scene_info().pack(), 
 |msg| {
                 match &msg.message {
                     FractalMessage::SceneName(scene, name) => {

@@ -57,7 +57,7 @@ impl Default for FractalFooter {
 pub struct FractalU14 {
     #[packed_field(bits="1..")]
     pub lsb: Integer<u8, packed_bits::Bits7>,
-    #[packed_field(bits="8..")]
+    #[packed_field(bits="9..")]
     pub msb: Integer<u8, packed_bits::Bits7>
 }
 
@@ -98,7 +98,9 @@ pub struct FractalU7 {
 
 impl From<u8> for FractalU7 {
     fn from(n: u8) -> Self {
-        n.into()
+        FractalU7 {
+            msb: n.into()
+        }
     }
 }
 
