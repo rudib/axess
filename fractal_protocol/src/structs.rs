@@ -2,7 +2,7 @@ use packed_struct::{prelude::packed_bits, types::ReservedZero};
 use packed_struct::{types::Integer, PackedStruct};
 use packed_struct::types::SizedInteger;
 use packed_struct::types::bits::*;
-use packed_struct::PrimitiveEnum;
+use packed_struct::{PrimitiveEnum, PackedStructSlice};
 //use packed_struct::prelude::*;
 
 use crate::{
@@ -170,7 +170,6 @@ pub struct EffectStatus {
     pub is_bypassed: bool
 }
 
-
 #[test]
 fn test_pack_cmd_with_int() {
     let msg = FractalCmdWithU7::new(FractalModel::III, FractalFunction::GET_SCENE_NAME, 0x7F.into());
@@ -190,6 +189,74 @@ let msg = [
 ];
 */
 
+#[derive(Debug, Clone)]
+pub struct FractalMessageEffectStatus {
+    pub header: FractalHeader,
+    pub function: FractalFunction,
+    pub effects: Vec<EffectStatus>,
+    pub footer: FractalFooter
+}
+
+impl PackedStruct<Vec<u8>> for FractalMessageEffectStatus {
+    fn pack(&self) -> Vec<u8> {
+        let mut pack = vec![];
+        pack.extend_from_slice(&self.header.pack());
+        pack.push(self.function.to_primitive());
+        for effect in &self.effects {
+            pack.extend_from_slice(&effect.pack());
+        }
+        pack.extend_from_slice(&self.footer.pack());
+
+        pack
+    }
+
+    fn unpack(src: &Vec<u8>) -> Result<Self, packed_struct::PackingError> {
+        let mut i = 0;
+        let n = FractalHeader::packed_bytes();
+        let header_slice = &src[i..i+n];        
+        let header = FractalHeader::unpack_from_slice(&header_slice)?;
+        i += n;
+
+        let function = FractalFunction::from_primitive(src[i]).unwrap();
+        i += 1;
+
+        let mut effects = vec![];
+        let all_effects_packed = &src[i..(src.len() - 2)];
+        let effect_size_bytes = EffectStatus::packed_bytes();
+        for effect_packed in all_effects_packed.chunks(effect_size_bytes) {
+            let effect = EffectStatus::unpack_from_slice(effect_packed)?;
+            effects.push(effect);
+        }
+
+        i += all_effects_packed.len();
+        
+        let footer_slice = &src[i..];
+        let footer = FractalFooter::unpack_from_slice(&footer_slice)?;
+
+        Ok(FractalMessageEffectStatus {
+            header,
+            function,
+            effects,
+            footer
+        })
+    }
+}
+
+impl FractalMessageChecksum for FractalMessageEffectStatus {
+    fn get_footer(&self) -> &FractalFooter {
+        &self.footer
+    }
+
+    fn get_footer_mut(&mut self) -> &mut FractalFooter {
+        &mut self.footer
+    }
+
+    fn get_checksum_payload(&self) -> Vec<u8> {
+        let a = self.pack();
+        a[..a.len() - 2].to_vec()
+    }
+}
+
 #[test]
 fn test_effect_status_dump() {
     let msg = vec![
@@ -199,17 +266,7 @@ fn test_effect_status_dump() {
         0x32, 0x01, 0x40, 0x42, 0x00, 0x40, 0x43, 0x00, 0x40, 0x6a, 0x00, 0x41, 0x66, 0x00, 0x40,
         0x26, 0x01, 0x10, 0x49, 0x01, 0x10, 0x48, 0x01, 0x10, 0x09, 0xf7,
     ];
-
-    /*
-    let es = EffectStatus {
-        channel: 0.into(),
-        effect_id: StatusEffectId(EffectId::ID_DISTORT1),
-        supported_channels: 0.into(),
-        is_bypassed: false,
-    };
-    println!("{}", es);
-    */
-
+    
     let es_packed = [0x3a, 0x00, 0x40];
     let es = EffectStatus::unpack(&es_packed).unwrap();    
     println!("es: {:?}", es);
@@ -218,4 +275,8 @@ fn test_effect_status_dump() {
     let effect_id: u16 = es.effect_id.into();
     assert_eq!(Some(EffectId::ID_AMP1), EffectId::from_primitive(effect_id as u8));
     assert_eq!(&es_packed, &es.pack());
+
+    let all_effects = FractalMessageEffectStatus::unpack(&msg).unwrap();
+    println!("{:?}", all_effects);
+    assert!(all_effects.valid_checksum());
 }
