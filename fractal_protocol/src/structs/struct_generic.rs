@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use packed_struct::{PackedStruct, PackedStructSlice, PackingError, PrimitiveEnum};
 
 use crate::{functions::FractalFunction, model::FractalModel};
@@ -10,6 +12,16 @@ pub struct FractalAudioMessage<TData> {
     pub data: TData,
 
     pub footer: FractalFooter
+}
+
+pub trait FractalAudioMessageFunction {
+    fn get_function(&self) -> FractalFunction;
+}
+
+impl<TData> FractalAudioMessageFunction for FractalAudioMessage<TData> {
+    fn get_function(&self) -> FractalFunction {
+        self.function
+    }
 }
 
 impl<TData> FractalAudioMessage<TData> where TData: PackedStructSlice {
@@ -127,18 +139,18 @@ impl PackedStructSlice for DataVoid {
     }
 }
 
-pub struct Data<T1, T2>(T1, T2);
-impl<T1, T2> PackedStructSlice for Data<T1, T2> where T1: PackedStructSlice, T2: PackedStructSlice {
+pub struct Data<A, B>(pub A, pub B);
+impl<A, B> PackedStructSlice for Data<A, B> where A: PackedStructSlice, B: PackedStructSlice {
     fn pack_to_slice(&self, output: &mut [u8]) -> Result<(), PackingError> {
         if output.len() != Self::packed_bytes() { return Err(PackingError::BufferSizeMismatch { expected: Self::packed_bytes(), actual: output.len() }); }
 
         let mut i = 0;
 
-        let n = T1::packed_bytes();
+        let n = A::packed_bytes();
         self.0.pack_to_slice(&mut output[i..(i+n)])?;
         i += n;
 
-        let n = T2::packed_bytes();
+        let n = B::packed_bytes();
         self.1.pack_to_slice(&mut output[i..(i+n)])?;
         i += n;
 
@@ -148,19 +160,19 @@ impl<T1, T2> PackedStructSlice for Data<T1, T2> where T1: PackedStructSlice, T2:
     fn unpack_from_slice(src: &[u8]) -> Result<Self, PackingError> {
         let mut i = 0;
 
-        let n = T1::packed_bytes();
-        let t1 = T1::unpack_from_slice(&src[i..(i+n)])?;
+        let n = A::packed_bytes();
+        let t1 = A::unpack_from_slice(&src[i..(i+n)])?;
         i += n;
 
-        let n = T2::packed_bytes();
-        let t2 = T2::unpack_from_slice(&src[i..(i+n)])?;
+        let n = B::packed_bytes();
+        let t2 = B::unpack_from_slice(&src[i..(i+n)])?;
         i += n;
 
         Ok(Self(t1, t2))
     }
 
     fn packed_bytes() -> usize {
-        T1::packed_bytes() + T2::packed_bytes()
+        A::packed_bytes() + B::packed_bytes()
     }
 }
 

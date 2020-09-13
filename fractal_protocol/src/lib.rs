@@ -22,5 +22,6 @@ quick_error! {
     pub enum FractalProtocolError {
         CrcMismatch {}
         UnknownMessage {}
+        MessageConversionError {}
     }
 }
