@@ -20,7 +20,7 @@ pub trait MessageHelper {
     fn response_function() -> FractalFunction;
 }
 
-
+#[derive(Debug, Clone)]
 pub enum FractalAudioMessages {
     FirmwareVersion(FirmwareVersion),
     MultipurposeResponse(MultipurposeResponse),

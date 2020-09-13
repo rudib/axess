@@ -1,14 +1,16 @@
 use std::fmt::Display;
 
+use crate::messages::firmware_version::FirmwareVersion;
+
 #[derive(Clone, Debug)]
 pub struct FractalDevice {
     pub model: FractalModel,
-    pub firmware: (u8, u8)
+    pub firmware: FirmwareVersion
 }
 
 impl Display for FractalDevice {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}, firmware {}.{}", self.model, self.firmware.0, self.firmware.1)
+        write!(f, "{}, firmware {}.{}", self.model, self.firmware.major, self.firmware.minor)
     }
 }
 

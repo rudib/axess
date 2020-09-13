@@ -4,7 +4,7 @@ use state::DeviceState;
 use packed_struct::PackedStructSlice;
 use crate::{payload::{PayloadConnection, UiPayload}, FractalResult, FractalResultVoid, utils::filter_first, transport::TransportEndpoint};
 use crate::transport::{Transport, midi::{MidiConnection, Midi}, TransportConnection, serial::TransportSerial, Endpoint};
-use fractal_protocol::{message::{FractalMessage, FractalMessageWrapper}, model::{FractalDevice}, message2::validate_and_decode_message, common::{disconnect_from_controller, wrap_msg, get_current_preset_name, get_firmware_version, get_current_scene_name, set_preset_number, set_scene_number}, functions::FractalFunction, message2::SYSEX_START, message2::SYSEX_MANUFACTURER_BYTE1, message2::SYSEX_MANUFACTURER_BYTE2, message2::SYSEX_MANUFACTURER_BYTE3, message2::SYSEX_END, buffer::MessagesBuffer, structs::FractalAudioMessage, structs::DataVoid, messages::firmware_version::FirmwareVersionHelper};
+use fractal_protocol::{message::{FractalMessage, FractalMessageWrapper}, model::{FractalDevice}, message2::validate_and_decode_message, common::{disconnect_from_controller, wrap_msg, get_current_preset_name, get_firmware_version, get_current_scene_name, set_preset_number, set_scene_number}, functions::FractalFunction, message2::SYSEX_START, message2::SYSEX_MANUFACTURER_BYTE1, message2::SYSEX_MANUFACTURER_BYTE2, message2::SYSEX_MANUFACTURER_BYTE3, message2::SYSEX_END, buffer::MessagesBuffer, structs::FractalAudioMessage, structs::DataVoid, messages::firmware_version::FirmwareVersionHelper, messages::FractalAudioMessages};
 use std::{time::Duration, thread, pin::Pin};
 use log::{error, trace};
 use tokio::runtime::Runtime;
@@ -260,7 +260,7 @@ impl UiBackend {
         let transport = self.transports.iter().find(|t| t.id() == endpoint.transport_id).ok_or(FractalCoreError::Other("Transport not found".into()))?;
         let mut connection = transport.connect(&endpoint.transport_endpoint)?;
 
-        let mut midi_messages = BroadcastChannel::<FractalMessageWrapper>::new();
+        let mut midi_messages = BroadcastChannel::<FractalAudioMessages>::new();
 
         {
             let receiver = connection.get_receiver().clone();
@@ -287,11 +287,11 @@ impl UiBackend {
         connection.write(&wrap_msg(vec![0x7F, 0x00]))?;
         // retrieve the model        
         let model = filter_first(&mut midi_messages, |msg| {
-            match msg.message {
-                FractalMessage::MultipurposeResponse { function_id, response_code} 
-                    if function_id == 0 && response_code == 0 => 
+            match msg {
+                FractalAudioMessages::MultipurposeResponse(multi_resp)
+                    if multi_resp.function_id == 0 && multi_resp.response_code == 0 => 
                 {
-                    msg.model
+                    Some(multi_resp.model)
                 },
                 _ => None
             }
@@ -303,9 +303,9 @@ impl UiBackend {
         connection.write(&FirmwareVersionHelper::get_request(model).pack_to_vec()?)?;
 
         let firmware = filter_first(&mut midi_messages, |msg| {
-            match msg.message {
-                FractalMessage::FirmwareVersion { major, minor } => {
-                    Some((major, minor))
+            match msg {
+                FractalAudioMessages::FirmwareVersion(firmware) => {
+                    Some(firmware)
                 },
                 _ => None
             }

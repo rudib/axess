@@ -6,7 +6,7 @@ use crate::{
     functions::FractalFunction,
     structs::{Data, FractalAudioMessage, FractalString32, FractalU14},
 };
-
+#[derive(Debug, Clone)]
 pub struct Preset {
     pub number: u16,
     pub name: String,

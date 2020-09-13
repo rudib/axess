@@ -1,6 +1,6 @@
 use log::trace;
 
-use crate::{message::FractalMessageWrapper, message2::SYSEX_HEADER, message2::SYSEX_END, message2::validate_and_decode_message};
+use crate::{message::FractalMessageWrapper, message2::SYSEX_HEADER, message2::SYSEX_END, message2::validate_and_decode_message, messages::parse_sysex_message, messages::FractalAudioMessages};
 
 pub struct MessagesBuffer {
     buffer: Vec<u8>
@@ -13,7 +13,8 @@ impl MessagesBuffer {
         }
     }
 
-    pub fn parse(&mut self, msg: &[u8]) -> Option<FractalMessageWrapper> {
+    // todo: parse ALL messages in the buffer
+    pub fn parse(&mut self, msg: &[u8]) -> Option<FractalAudioMessages> {
         self.buffer.extend(msg);
 
         // find the first sysex message in the buffer
@@ -22,11 +23,16 @@ impl MessagesBuffer {
                 for n in (i+SYSEX_HEADER.len())..self.buffer.len() {
                     match self.buffer.get(n) {
                         Some(f) if *f == SYSEX_END => {
-                            if let Some(msg) = validate_and_decode_message(&self.buffer[i..n+1]) {
-                                self.buffer = self.buffer[i+(n-i)+1..].to_vec();
-                                return Some(msg);
+
+                            match parse_sysex_message(&self.buffer[i..n+1]) {
+                                Ok(msg) => {
+                                    self.buffer = self.buffer[i+(n-i)+1..].to_vec();
+                                    return Some(msg);
+                                }
+                                Err(e) => {
+                                    trace!("Failed to parsed SYSEX, entire buffer: {:X?}. Error message {:?}", &self.buffer, e);
+                                }
                             }
-                            trace!("Failed to parsed SYSEX, entire buffer: {:X?}", &self.buffer);
                         }
                         _ => ()
                     }

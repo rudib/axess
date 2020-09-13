@@ -129,7 +129,8 @@ impl FractalString32 {
     pub fn try_as_string(&self) -> Option<String> {
         let len = self.data.iter().take_while(|c| **c != 0 && c.is_ascii()).count();
         let s = String::from_utf8_lossy(&self.data[..len]);
-        Some(s.into())
+        let s: String = s.into();
+        Some(s.trim_end().into())
     }
 }
 

@@ -1,6 +1,6 @@
-use std::ops::Deref;
+use std::{ops::Deref, marker::PhantomData};
 
-use packed_struct::{PackedStruct, PackedStructSlice, PackingError, PrimitiveEnum};
+use packed_struct::{PackedStruct, PackedStructSlice, PackingError, PrimitiveEnum, types::bits::ByteArray};
 
 use crate::{functions::FractalFunction, model::FractalModel};
 use super::{FractalHeader, FractalFooter, FractalMessageChecksum};
@@ -138,7 +138,7 @@ impl PackedStructSlice for DataVoid {
         0
     }
 }
-
+#[derive(Debug)]
 pub struct Data<A, B>(pub A, pub B);
 impl<A, B> PackedStructSlice for Data<A, B> where A: PackedStructSlice, B: PackedStructSlice {
     fn pack_to_slice(&self, output: &mut [u8]) -> Result<(), PackingError> {
@@ -173,6 +173,31 @@ impl<A, B> PackedStructSlice for Data<A, B> where A: PackedStructSlice, B: Packe
 
     fn packed_bytes() -> usize {
         A::packed_bytes() + B::packed_bytes()
+    }
+}
+
+#[derive(Debug)]
+pub struct DataBytes<TBytes> where TBytes: packed_struct::types::bits::NumberOfBytes {
+    pub bytes: TBytes::AsBytes
+}
+impl<TBytes> PackedStructSlice for DataBytes<TBytes> where TBytes: packed_struct::types::bits::NumberOfBytes {
+    fn pack_to_slice(&self, output: &mut [u8]) -> Result<(), PackingError> {
+        output.copy_from_slice(&self.bytes.as_bytes_slice());
+        Ok(())
+    }
+
+    fn unpack_from_slice(src: &[u8]) -> Result<Self, PackingError> {
+        let mut bytes = TBytes::AsBytes::new(0);
+        let slice = bytes.as_mut_bytes_slice();
+        slice.copy_from_slice(src);
+
+        Ok(DataBytes {
+            bytes
+        })
+    }
+
+    fn packed_bytes() -> usize {
+        TBytes::number_of_bytes() as usize
     }
 }
 
