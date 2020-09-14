@@ -14,56 +14,24 @@ use crate::{functions::FractalFunction, structs::FractalAudioMessageFunction};
 use crate::FractalProtocolError;
 use crate::packed_struct::PackedStructSlice;
 
+use enum_derive_2018::EnumFromInner;
+use macro_attr_2018::macro_attr;
+
 pub trait MessageHelper where <Self::Response as TryFrom<Self::RawResponse>>::Error : Debug {
     type RawResponse : packed_struct::PackedStructSlice + FractalAudioMessageFunction;
     type Response : TryFrom<Self::RawResponse> + Into<FractalAudioMessages>;
 
     fn response_function() -> FractalFunction;
 }
-
-#[derive(Debug, Clone)]
-pub enum FractalAudioMessages {
-    FirmwareVersion(FirmwareVersion),
-    MultipurposeResponse(MultipurposeResponse),
-    PresetAndName(PresetAndName),
-    Preset(Preset),
-    SceneWithName(SceneWithName),
-    Scene(Scene)
-}
-
-impl From<FirmwareVersion> for FractalAudioMessages {
-    fn from(v: FirmwareVersion) -> Self {
-        FractalAudioMessages::FirmwareVersion(v)
-    }
-}
-
-impl From<MultipurposeResponse> for FractalAudioMessages {
-    fn from(v: MultipurposeResponse) -> Self {
-        FractalAudioMessages::MultipurposeResponse(v)
-    }
-}
-
-impl From<Preset> for FractalAudioMessages {
-    fn from(v: Preset) -> Self {
-        FractalAudioMessages::Preset(v)
-    }
-}
-
-impl From<PresetAndName> for FractalAudioMessages {
-    fn from(v: PresetAndName) -> Self {
-        FractalAudioMessages::PresetAndName(v)
-    }
-}
-
-impl From<SceneWithName> for FractalAudioMessages {
-    fn from(v: SceneWithName) -> Self {
-        FractalAudioMessages::SceneWithName(v)
-    }
-}
-
-impl From<Scene> for FractalAudioMessages {
-    fn from(v: Scene) -> Self {
-        FractalAudioMessages::Scene(v)
+macro_attr! {
+    #[derive(Debug, Clone, EnumFromInner!)]
+    pub enum FractalAudioMessages {
+        FirmwareVersion(FirmwareVersion),
+        MultipurposeResponse(MultipurposeResponse),
+        PresetAndName(PresetAndName),
+        Preset(Preset),
+        SceneWithName(SceneWithName),
+        Scene(Scene)
     }
 }
 
@@ -92,16 +60,13 @@ impl SysexDecoder {
 
         match T::RawResponse::unpack_from_slice(&msg) {
             Ok(raw) => {
-                println!("function: {:?}", raw.get_function());
                 if raw.get_function() == T::response_function() {
-                    println!("function match");
                     match T::Response::try_from(raw) {
                         Ok(decoded) => {
                             self.decoded = Some(decoded.into());
                         }
                         Err(e) => {
                             error!("Function {:?} matches, but TryFrom conversion failed: {:?}", T::response_function(), e);
-                            println!("Function {:?} matches, but TryFrom conversion failed: {:?}", T::response_function(), e);
                         }
                     }
                 }
