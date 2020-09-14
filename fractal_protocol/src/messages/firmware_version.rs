@@ -18,7 +18,7 @@ impl TryFrom<Raw> for FirmwareVersion {
     type Error = FractalProtocolError;
 
     fn try_from(value: Raw) -> Result<Self, Self::Error> {
-        let (major, minor) = (value.data.0, value.data.1.0);
+        let (major, minor) = (value.data.0, (value.data.1).0);
         Ok(FirmwareVersion {
             major: major.into(),
             minor: minor.into()
