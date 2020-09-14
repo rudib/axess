@@ -49,3 +49,19 @@ impl Display for FractalModel {
         }
     }
 }
+
+impl FractalModel {
+    pub fn number_of_presets(&self) -> Option<u16> {
+        match self {
+            FractalModel::III | FractalModel::FM3 => Some(512),
+            _ => None
+        }
+    }
+
+    pub fn number_of_scenes(&self) -> Option<u8> {
+        match self {
+            FractalModel::III | FractalModel::FM3 => Some(8),
+            _ => None
+        }
+    }
+}

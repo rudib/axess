@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use super::MessageHelper;
-use crate::FractalProtocolError;
+use crate::{FractalProtocolError, model::FractalModel};
 use crate::{
     functions::FractalFunction,
     structs::{Data, FractalAudioMessage, FractalString32, FractalU7},
@@ -30,6 +30,16 @@ impl TryFrom<FractalAudioMessage<Data<FractalU7, FractalString32>>> for Scene {
 }
 
 pub struct SceneHelper;
+
+impl SceneHelper {
+    pub fn get_current_scene_info(model: FractalModel) -> FractalAudioMessage<FractalU7> {
+        FractalAudioMessage::new(model, FractalFunction::GET_SCENE_NAME, FractalU7::new_all())
+    }
+
+    pub fn get_scene_info(model: FractalModel, scene: u8) -> FractalAudioMessage<FractalU7> {
+        FractalAudioMessage::new(model, FractalFunction::GET_SCENE_NAME, scene.into())
+    }
+}
 
 impl MessageHelper for SceneHelper {
     type RawResponse = FractalAudioMessage<Data<FractalU7, FractalString32>>;

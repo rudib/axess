@@ -1,7 +1,7 @@
 use std::time::Duration;
 
 use broadcaster::BroadcastChannel;
-use fractal_protocol::{model::FractalDevice, message::FractalMessageWrapper, message::FractalMessage, commands::Commands, messages::FractalAudioMessages};
+use fractal_protocol::{model::FractalDevice, message::FractalMessageWrapper, message::FractalMessage, commands::Commands, messages::FractalAudioMessages, messages::preset::PresetHelper, messages::scene::SceneHelper};
 use log::trace;
 
 use crate::{transport::TransportConnection, FractalResult, utils::filter_first};
@@ -35,9 +35,7 @@ impl ConnectedDevice {
     }
 
     pub async fn update_state(&mut self) -> FractalResult<bool> {
-        let commands = Commands::new(self.device.model);
-        
-        let preset = self.send_and_wait_for(&commands.get_current_preset_info().pack_to_vec()?,
+        let preset = self.send_and_wait_for(&PresetHelper::get_current_preset_info(self.device.model).pack_to_vec()?,
 |msg| {
                 match msg {
                     FractalAudioMessages::Preset(preset) => {
@@ -47,7 +45,7 @@ impl ConnectedDevice {
                 }
             }).await.map_err(|_| FractalCoreError::MissingValue("Preset".into()))?;
 
-        let scene = self.send_and_wait_for(&commands.get_current_scene_info().pack_to_vec()?, 
+        let scene = self.send_and_wait_for(&SceneHelper::get_current_scene_info(self.device.model).pack_to_vec()?, 
 |msg| {
                 match msg {
                     FractalAudioMessages::Scene(scene) => {

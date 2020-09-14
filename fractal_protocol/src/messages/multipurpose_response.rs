@@ -24,6 +24,13 @@ impl TryFrom<FractalAudioMessage<Data<FractalU7, FractalU7>>> for MultipurposeRe
 }
 
 pub struct MultipurposeResponseHelper;
+
+impl MultipurposeResponseHelper {
+    pub fn get_discovery_request() -> Vec<u8> {
+        vec![0xF0, 0x0, 0x1, 0x74, 0x7F, 0x0, 0x7A, 0xF7]
+    }
+}
+
 impl MessageHelper for MultipurposeResponseHelper {
     type RawResponse = FractalAudioMessage<Data<FractalU7, FractalU7>>;
     type Response = MultipurposeResponse;

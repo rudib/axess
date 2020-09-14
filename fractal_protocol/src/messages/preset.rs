@@ -1,7 +1,7 @@
 use std::convert::TryFrom;
 
 use super::MessageHelper;
-use crate::FractalProtocolError;
+use crate::{FractalProtocolError, model::FractalModel};
 use crate::{
     functions::FractalFunction,
     structs::{Data, FractalAudioMessage, FractalString32, FractalU14},
@@ -12,12 +12,12 @@ pub struct Preset {
     pub name: String,
 }
 
-impl TryFrom<FractalAudioMessage<Data<FractalU14, FractalString32>>> for Preset {
+type Raw = FractalAudioMessage<Data<FractalU14, FractalString32>>;
+
+impl TryFrom<Raw> for Preset {
     type Error = FractalProtocolError;
 
-    fn try_from(
-        value: FractalAudioMessage<Data<FractalU14, FractalString32>>,
-    ) -> Result<Self, Self::Error> {
+    fn try_from(value: Raw) -> Result<Self, Self::Error> {
         Ok(Preset {
             number: value.data.0.into(),
             name: value
@@ -31,8 +31,18 @@ impl TryFrom<FractalAudioMessage<Data<FractalU14, FractalString32>>> for Preset 
 
 pub struct PresetHelper;
 
+impl PresetHelper {
+    pub fn get_current_preset_info(model: FractalModel) -> FractalAudioMessage<FractalU14> {
+        FractalAudioMessage::new(model, FractalFunction::PRESET_INFO, FractalU14::new_all())
+    }
+
+    pub fn get_preset_info(model: FractalModel, preset: u16) -> FractalAudioMessage<FractalU14> {
+        FractalAudioMessage::new(model, FractalFunction::PRESET_INFO, preset.into())
+    }
+}
+
 impl MessageHelper for PresetHelper {
-    type RawResponse = FractalAudioMessage<Data<FractalU14, FractalString32>>;
+    type RawResponse = Raw;
     type Response = Preset;
 
     fn response_function() -> crate::functions::FractalFunction {

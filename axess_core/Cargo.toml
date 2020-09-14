@@ -26,3 +26,6 @@ packed_struct = "0.3"
 
 [target.'cfg(windows)'.dependencies]
 wmi = "0.5"
+
+[dev-dependencies]
+tokio-test="*"
