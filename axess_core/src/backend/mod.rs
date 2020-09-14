@@ -2,8 +2,8 @@ use broadcaster::BroadcastChannel;
 use connected_device::ConnectedDevice;
 use state::DeviceState;
 use packed_struct::PackedStructSlice;
-use crate::{payload::{PayloadConnection, UiPayload}, FractalResult, FractalResultVoid, utils::filter_first, transport::TransportEndpoint};
-use crate::transport::{Transport, midi::{Midi}, TransportConnection, serial::TransportSerial, Endpoint};
+use crate::{payload::{PayloadConnection, UiPayload}, FractalResult, FractalResultVoid, utils::filter_first};
+use crate::transport::{Transport, midi::{Midi}, serial::TransportSerial, Endpoint};
 use fractal_protocol::{model::{FractalDevice}, buffer::MessagesBuffer, messages::firmware_version::FirmwareVersionHelper, messages::FractalAudioMessages, messages::multipurpose_response::MultipurposeResponseHelper};
 use std::{time::Duration, thread, pin::Pin};
 use log::{error, trace};
@@ -11,7 +11,6 @@ use tokio::runtime::Runtime;
 use tokio::stream::{pending, Stream};
 use futures::{executor::block_on, StreamExt, future::{Either}};
 use crate::FractalCoreError;
-use crate::packed_struct::{PrimitiveEnum, PackedStruct};
 
 mod connected_device;
 mod state;

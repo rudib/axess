@@ -9,7 +9,7 @@ use scene::{Scene, SceneHelper};
 use firmware_version::{FirmwareVersion, FirmwareVersionHelper};
 use multipurpose_response::{MultipurposeResponse, MultipurposeResponseHelper};
 
-use crate::{structs::{FractalU7, FractalAudioMessage, FractalU14, FractalString32, Data}, functions::FractalFunction, structs::FractalAudioMessageFunction};
+use crate::{functions::FractalFunction, structs::FractalAudioMessageFunction};
 use crate::FractalProtocolError;
 use crate::packed_struct::PackedStructSlice;
 

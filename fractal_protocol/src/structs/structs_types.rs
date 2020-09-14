@@ -1,13 +1,6 @@
 use packed_struct::prelude::packed_bits;
-use packed_struct::{types::Integer, PackedStruct};
-use packed_struct::types::SizedInteger;
-use packed_struct::types::bits::*;
-use packed_struct::PrimitiveEnum;
-//use packed_struct::prelude::*;
-
-use crate::{
-    effect::EffectId, functions::FractalFunction, model::FractalModel,
-buffer::SYSEX_END, buffer::SYSEX_START, buffer::SYSEX_MANUFACTURER};
+use packed_struct::{types::Integer};
+use crate::{model::FractalModel, buffer::SYSEX_END, buffer::SYSEX_START, buffer::SYSEX_MANUFACTURER};
 
 #[derive(Debug, Copy, Clone, PackedStruct, PartialEq, Eq)]
 pub struct FractalHeader {
@@ -121,7 +114,7 @@ pub struct FractalString32 {
 }
 
 impl FractalString32 {
-    pub fn from_string(s: &str) -> Option<Self> {
+    pub fn from_string(_s: &str) -> Option<Self> {
         panic!("todo");
     }
 

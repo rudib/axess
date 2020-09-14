@@ -2,7 +2,7 @@ extern crate broadcaster;
 extern crate fractal_protocol;
 
 #[macro_use] extern crate quick_error;
-#[macro_use] extern crate crossbeam_channel;
+extern crate crossbeam_channel;
 extern crate packed_struct;
 
 

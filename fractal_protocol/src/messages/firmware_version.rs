@@ -5,7 +5,6 @@ use crate::FractalProtocolError;
 use super::MessageHelper;
 
 use packed_struct::types::bits::*;
-use packed_struct::PackedStructSlice;
 
 #[derive(Debug, Clone)]
 pub struct FirmwareVersion {
@@ -47,6 +46,8 @@ impl MessageHelper for FirmwareVersionHelper {
 
 #[test]
 fn test_parse_resp() {
+    use crate::packed_struct::PackedStructSlice;
+
     let msg = [0xF0, 0x0, 0x1, 0x74, 0x10, 0x8, 0xD, 0x3, 0x10, 0x1, 0x8, 0x0, 0x0, 0xA, 0xF7];
     let s = Raw::packed_bytes();
     println!("s: {}", s);

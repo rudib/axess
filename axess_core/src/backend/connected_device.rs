@@ -2,7 +2,6 @@ use std::time::Duration;
 
 use broadcaster::BroadcastChannel;
 use fractal_protocol::{model::FractalDevice, messages::FractalAudioMessages, messages::preset::PresetHelper, messages::scene::SceneHelper};
-use log::trace;
 
 use crate::{transport::TransportConnection, FractalResult, utils::filter_first};
 use crate::FractalCoreError;

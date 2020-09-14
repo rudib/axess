@@ -1,6 +1,4 @@
-use std::{ops::Deref, marker::PhantomData};
-
-use packed_struct::{PackedStruct, PackedStructSlice, PackingError, PrimitiveEnum, types::bits::ByteArray};
+use packed_struct::{PackedStructSlice, PackingError, PrimitiveEnum, types::bits::ByteArray};
 
 use crate::{functions::FractalFunction, model::FractalModel};
 use super::{FractalHeader, FractalFooter, FractalMessageChecksum};
@@ -126,11 +124,11 @@ impl<TData> FractalMessageChecksum for FractalAudioMessage<TData> where TData: P
 pub struct DataVoid;
 
 impl PackedStructSlice for DataVoid {
-    fn pack_to_slice(&self, output: &mut [u8]) -> Result<(), PackingError> {
+    fn pack_to_slice(&self, _output: &mut [u8]) -> Result<(), PackingError> {
         Ok(())
     }
 
-    fn unpack_from_slice(src: &[u8]) -> Result<Self, PackingError> {
+    fn unpack_from_slice(_src: &[u8]) -> Result<Self, PackingError> {
         Ok(DataVoid)
     }
 
@@ -152,7 +150,7 @@ impl<A, B> PackedStructSlice for Data<A, B> where A: PackedStructSlice, B: Packe
 
         let n = B::packed_bytes();
         self.1.pack_to_slice(&mut output[i..(i+n)])?;
-        i += n;
+        //i += n;
 
         Ok(())
     }
@@ -166,7 +164,7 @@ impl<A, B> PackedStructSlice for Data<A, B> where A: PackedStructSlice, B: Packe
 
         let n = B::packed_bytes();
         let t2 = B::unpack_from_slice(&src[i..(i+n)])?;
-        i += n;
+        //i += n;
 
         Ok(Self(t1, t2))
     }

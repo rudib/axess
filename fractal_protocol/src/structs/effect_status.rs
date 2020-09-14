@@ -1,7 +1,7 @@
 use packed_struct::{types::{Integer, ReservedZero}, PackedStruct};
 use packed_struct::prelude::packed_bits;
 
-use crate::{functions::FractalFunction, effect::EffectId};
+use crate::{functions::FractalFunction};
 
 use super::{FractalU14, FractalHeader, FractalFooter, FractalMessageChecksum};
 use packed_struct::{PrimitiveEnum, PackedStructSlice};
@@ -88,6 +88,8 @@ impl FractalMessageChecksum for FractalMessageEffectStatus {
 
 #[test]
 fn test_effect_status_dump() {
+    use crate::effect::EffectId;
+
     let msg = vec![
         0xf0, 0x00, 0x01, 0x74, 0x10, 0x13, 0x3a, 0x00, 0x40, 0x3e, 0x00, 0x40, 0x2e, 0x00, 0x40,
         0x46, 0x00, 0x40, 0x7a, 0x00, 0x40, 0x3a, 0x01, 0x10, 0x36, 0x01, 0x10, 0x76, 0x00, 0x42,

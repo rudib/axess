@@ -1,5 +1,5 @@
 
-use crate::transport::{TransportEndpoint, midi::MidiPorts, Endpoint};
+use crate::transport::{Endpoint};
 use crate::FractalCoreError;
 
 #[derive(Debug, Clone)]
