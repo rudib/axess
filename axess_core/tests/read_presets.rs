@@ -26,7 +26,7 @@ fn read_all_presets() -> Result<(), FractalCoreError> {
         let scenes = connection.device.model.number_of_scenes().unwrap();
 
         //for i in 0..total_presets {
-        for i in 0..10 {
+        for i in 0..512 {
             let preset = connection.send_and_wait_for(&PresetHelper::get_preset_info(connection.device.model, i).pack_to_vec()?,
 |msg| {
                 match msg {
