@@ -12,7 +12,7 @@ const NOT_CONNECTED: &'static str = "Not connected.";
 
 #[derive(NwgUi, Default)]
 pub struct MainWindow {
-    #[nwg_control(title: "Axess Fractal Audio Editor", flags: "MAIN_WINDOW|VISIBLE")]
+    #[nwg_control(title: "Axess Fractal Audio Editor", size: (800, 600), flags: "MAIN_WINDOW|VISIBLE")]
     #[nwg_events( OnInit: [MainWindow::init], OnWindowClose: [MainWindow::on_exit], OnKeyPress: [MainWindow::on_key_press(SELF, EVT_DATA)] )]
     window: nwg::Window,
 
@@ -103,12 +103,23 @@ pub struct MainWindow {
     #[nwg_layout(parent: tab_presets)]
     presets_grid: nwg::GridLayout,
 
+    #[nwg_control(parent: tab_presets, text: "Presets")]
+    #[nwg_layout_item(layout: presets_grid, row: 0, col: 0)]
+    presets_label_presets: nwg::Label,
+
     #[nwg_control(parent: tab_presets, list_style: nwg::ListViewStyle::Simple)]
-    #[nwg_layout_item(layout: presets_grid, col: 0, row: 0)]
+    #[nwg_layout_item(layout: presets_grid, row: 1, col: 0)]
     #[nwg_events(OnListViewItemActivated: [MainWindow::presets_list_item_activated(SELF, EVT_DATA)], OnKeyPress: [MainWindow::presets_list_keypress(SELF, EVT_DATA)])]
     presets_list: nwg::ListView,
 
+    #[nwg_control(parent: tab_presets, text: "Scenes of the current preset")]
+    #[nwg_layout_item(layout: presets_grid, row: 0, col: 1)]
+    presets_label_scenes: nwg::Label,
 
+    #[nwg_control(parent: tab_presets, list_style: nwg::ListViewStyle::Simple)]
+    #[nwg_layout_item(layout: presets_grid, row: 1, col: 1)]
+    #[nwg_events(OnListViewItemActivated: [MainWindow::scenes_list_item_activated(SELF, EVT_DATA)], OnKeyPress: [MainWindow::scenes_list_keypress(SELF, EVT_DATA)])]
+    scenes_list: nwg::ListView,
 
 
     #[nwg_control]
@@ -197,6 +208,13 @@ impl MainWindow {
                 self.presets_list.set_visible(true);
                 self.presets_list.set_focus();
             },
+            Some(UiPayload::Scenes(scenes)) => {
+                self.scenes_list.clear();
+                for s in scenes {
+                    self.scenes_list.insert_item(format!("Scene {} {}", s.number, s.name));
+                }
+                self.scenes_list.set_visible(true);
+            }
             Some(_) => {}
             None => {}
         }
@@ -261,9 +279,13 @@ impl MainWindow {
     fn on_tab_changed(&self) {
         let selected_tab = self.tabs_holder.selected_tab();
         if selected_tab != usize::max_value() {
-            if selected_tab == 1 {
-                self.presets_list.clear();
+            if selected_tab == 1 {                
                 self.presets_list.set_visible(false);
+                self.scenes_list.set_visible(false);
+                
+                self.presets_list.clear();                
+                self.scenes_list.clear();
+                
                 self.send(UiPayload::RequestAllPresets);
             }
         }
@@ -286,6 +308,27 @@ impl MainWindow {
             if let Some(idx) = self.presets_list.selected_item() {
                 trace!("Selecting preset {}", idx);
                 self.send(UiPayload::DeviceState(payload::DeviceState::SetPreset {preset: idx as u16 }));
+            }
+        }
+    }
+
+    fn scenes_list_item_activated(&self, _data: &nwg::EventData) {
+        self.scene_selected();
+    }
+
+    fn scenes_list_keypress(&self, data: &nwg::EventData) {
+        if let nwg::EventData::OnKey(key) = data {
+            if *key == ' ' as u32 {
+                self.scene_selected();
+            }
+        }
+    }
+
+    fn scene_selected(&self) {
+        if self.tabs_holder.selected_tab() == 1 && self.scenes_list.focus() {
+            if let Some(idx) = self.scenes_list.selected_item() {
+                trace!("Selecting scene {}", idx);
+                self.send(UiPayload::DeviceState(payload::DeviceState::SetScene {scene: idx as u8 }));
             }
         }
     }

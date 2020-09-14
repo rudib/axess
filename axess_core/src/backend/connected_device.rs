@@ -61,7 +61,7 @@ impl ConnectedDevice {
             scene_name: scene.name
         };
         
-        if device_state != self.state {
+        if device_state != self.state {            
             self.state = device_state;
             
             return Ok(true);

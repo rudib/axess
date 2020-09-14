@@ -1,5 +1,5 @@
 
-use fractal_protocol::messages::preset::Preset;
+use fractal_protocol::messages::{preset::Preset, scene::Scene};
 
 use crate::transport::{Endpoint};
 use crate::FractalCoreError;
@@ -12,6 +12,8 @@ pub enum UiPayload {
     // when connected
     RequestAllPresets,
     Presets(Vec<Preset>),
+    RequestScenes,
+    Scenes(Vec<Scene>),
 
     /// Internal
     Ping,
