@@ -4,7 +4,7 @@ use state::DeviceState;
 use packed_struct::PackedStructSlice;
 use crate::{payload::{PayloadConnection, UiPayload}, FractalResult, FractalResultVoid, utils::filter_first};
 use crate::transport::{Transport, midi::{Midi}, serial::TransportSerial, Endpoint};
-use fractal_protocol::{model::{FractalDevice}, buffer::MessagesBuffer, messages::firmware_version::FirmwareVersionHelper, messages::FractalAudioMessages, messages::multipurpose_response::MultipurposeResponseHelper, messages::scene::SceneHelper};
+use fractal_protocol::{model::{FractalDevice}, buffer::MessagesBuffer, messages::firmware_version::FirmwareVersionHelper, messages::FractalAudioMessages, messages::multipurpose_response::MultipurposeResponseHelper, messages::scene::SceneHelper, messages::preset::PresetHelper};
 use std::{time::Duration, thread, pin::Pin};
 use log::{error, trace};
 use tokio::runtime::Runtime;
@@ -86,32 +86,10 @@ impl UiBackend {
             match action {
                 PendingAction::Message(msg) => {
                     trace!("Backend message received: {:?}", msg);
-
-                    match msg {
-                        UiPayload::Connection(c) => {
-                            self.connection(c).await;
-                        },
-                        UiPayload::DeviceState(crate::payload::DeviceState::SetPreset{ preset }) => {
-                            if let Some(ref mut device) = self.device {
-                                let bank = (preset / 128) as u8;
-                                let patch = (preset % 128) as u8;
-                                device.transport_endpoint.write(&vec![0xB0, 0x00, bank]);
-                                device.transport_endpoint.write(&vec![0xC0, patch]);
-                            }
-
-                            tokio::time::delay_for(Duration::from_millis(10)).await;
-                            self.status_poll().await;
-                        },
-                        UiPayload::DeviceState(crate::payload::DeviceState::SetScene { scene }) => {
-                            if let Some(ref mut device) = self.device {
-                                device.transport_endpoint.write(&SceneHelper::set_current_scene_number(device.device.model, scene).pack_to_vec().unwrap());
-                            }
-
-                            tokio::time::delay_for(Duration::from_millis(10)).await;
-                            self.status_poll().await;
-                        }
-                        _ => {}
-                    };
+                    match self.handle_action(msg).await {
+                        Err(e) => error!("Error handling the message: {:?}", e),
+                        _ => ()
+                    }
                 },
                 PendingAction::EndOfMessagesChannel => {
                     trace!("end of stream!");
@@ -122,6 +100,56 @@ impl UiBackend {
                 }
             }
         }
+    }
+
+    async fn handle_action(&mut self, msg: UiPayload) -> FractalResultVoid {
+        match msg {
+            UiPayload::Connection(c) => {
+                self.connection(c).await;
+            },
+            UiPayload::DeviceState(crate::payload::DeviceState::SetPreset{ preset }) => {
+                if let Some(ref mut device) = self.device {
+                    let bank = (preset / 128) as u8;
+                    let patch = (preset % 128) as u8;
+                    device.transport_endpoint.write(&vec![0xB0, 0x00, bank]);
+                    device.transport_endpoint.write(&vec![0xC0, patch]);
+                }
+
+                tokio::time::delay_for(Duration::from_millis(10)).await;
+                self.status_poll().await;
+            },
+            UiPayload::DeviceState(crate::payload::DeviceState::SetScene { scene }) => {
+                if let Some(ref mut device) = self.device {
+                    device.transport_endpoint.write(&SceneHelper::set_current_scene_number(device.device.model, scene).pack_to_vec().unwrap());
+                }
+
+                tokio::time::delay_for(Duration::from_millis(10)).await;
+                self.status_poll().await;
+            },
+            UiPayload::RequestAllPresets => {
+                //if let Some(ref mut device) = self.device
+                let device = self.device.as_mut().ok_or(FractalCoreError::NotConnected)?;
+                let presets_count = device.device.model.number_of_presets().ok_or(FractalCoreError::MissingValue("Number of presets".into()))?;
+        
+                let mut presets = vec![];
+                for i in 0..presets_count {
+                    let preset = device.send_and_wait_for(&PresetHelper::get_preset_info(device.device.model, i).pack_to_vec()?, |msg| {
+                            match msg {
+                                FractalAudioMessages::Preset(preset) => {
+                                    Some(preset.clone())
+                                },
+                                _ => None
+                            }
+                        }).await.map_err(|_| FractalCoreError::MissingValue("Preset".into()))?;
+                    presets.push(preset);
+                }
+
+                self.send(UiPayload::Presets(presets)).await?;
+            },
+            _ => {}
+        }
+
+        Ok(())
     }
 
     async fn send(&self, msg: UiPayload) -> FractalResultVoid {        

@@ -1,8 +1,10 @@
 use nwd::NwgUi;
+use native_windows_gui::{TabsContainer, Tab};
+use log::trace;
 
 use std::{cell::RefCell};
 
-use axess_core::{payload::{PayloadConnection, UiPayload, DeviceState, PresetAndScene}};
+use axess_core::{payload::{PayloadConnection, UiPayload, DeviceState, PresetAndScene}, payload};
 use super::{common::{FractalWindow, WindowApi}, connect::ConnectWindow};
 use crate::windows::main::main_window_ui::MainWindowUi;
 
@@ -43,46 +45,71 @@ pub struct MainWindow {
     #[nwg_control(text: NOT_CONNECTED, parent: window)]
     status_bar: nwg::StatusBar,
 
+    #[nwg_layout(parent: window)]
+    window_layout: nwg::GridLayout,
+
+    #[nwg_control(parent: window)]
+    #[nwg_layout_item(layout: window_layout, row: 0, col: 0)]
+    #[nwg_events( TabsContainerChanged: [MainWindow::on_tab_changed] )]
+    tabs_holder: TabsContainer,
+    #[nwg_control(parent: tabs_holder, text: "Main")]
+    tab_main: Tab,
+    #[nwg_control(parent: tabs_holder, text: "Presets")]
+    tab_presets: Tab,
 
 
-    #[nwg_layout(parent: window, spacing: 1)]
-    grid: nwg::GridLayout,
 
-    #[nwg_control]
-    #[nwg_layout_item(layout: grid, row: 0, col: 0)]
-    preset_number: nwg::Label,
+    #[nwg_layout(parent: tab_main, spacing: 1)]
+    main_grid: nwg::GridLayout,
 
-    #[nwg_control]
-    #[nwg_layout_item(layout: grid, row: 0, col: 1)]
-    preset_name: nwg::Label,
+    #[nwg_control(parent: tab_main)]
+    #[nwg_layout_item(layout: main_grid, row: 0, col: 0)]
+    main_preset_number: nwg::Label,
 
-    #[nwg_control(text: "Previous Preset")]
-    #[nwg_layout_item(layout: grid, row: 1, col: 0)]
+    #[nwg_control(parent: tab_main)]
+    #[nwg_layout_item(layout: main_grid, row: 0, col: 1)]
+    main_preset_name: nwg::Label,
+
+    #[nwg_control(text: "Previous Preset", parent: tab_main)]
+    #[nwg_layout_item(layout: main_grid, row: 1, col: 0)]
     #[nwg_events(OnButtonClick: [MainWindow::previous_preset])]
-    preset_minus: nwg::Button,
+    main_preset_minus: nwg::Button,
     
-    #[nwg_control(text: "Next Preset")]
-    #[nwg_layout_item(layout: grid, row: 1, col: 1)]
+    #[nwg_control(text: "Next Preset", parent: tab_main)]
+    #[nwg_layout_item(layout: main_grid, row: 1, col: 1)]
     #[nwg_events(OnButtonClick: [MainWindow::next_preset])]
-    preset_plus: nwg::Button,
+    main_preset_plus: nwg::Button,
 
-    #[nwg_control]
-    #[nwg_layout_item(layout: grid, row: 2, col: 0)]
-    scene_number: nwg::Label,
+    #[nwg_control(parent: tab_main)]
+    #[nwg_layout_item(layout: main_grid, row: 2, col: 0)]
+    main_scene_number: nwg::Label,
 
-    #[nwg_control]
-    #[nwg_layout_item(layout: grid, row: 2, col: 1)]
-    scene_name: nwg::Label,
+    #[nwg_control(parent: tab_main)]
+    #[nwg_layout_item(layout: main_grid, row: 2, col: 1)]
+    main_scene_name: nwg::Label,
 
-    #[nwg_control(text: "Previous Scene")]
-    #[nwg_layout_item(layout: grid, row: 3, col: 0)]
+    #[nwg_control(text: "Previous Scene", parent: tab_main)]
+    #[nwg_layout_item(layout: main_grid, row: 3, col: 0)]
     #[nwg_events(OnButtonClick: [MainWindow::previous_scene])]
-    scene_minus: nwg::Button,
+    main_scene_minus: nwg::Button,
     
-    #[nwg_control(text: "Next Scene")]
-    #[nwg_layout_item(layout: grid, row: 3, col: 1)]
+    #[nwg_control(text: "Next Scene", parent: tab_main)]
+    #[nwg_layout_item(layout: main_grid, row: 3, col: 1)]
     #[nwg_events(OnButtonClick: [MainWindow::next_scene])]
-    scene_plus: nwg::Button,
+    main_scene_plus: nwg::Button,
+
+
+    
+    #[nwg_layout(parent: tab_presets)]
+    presets_grid: nwg::GridLayout,
+
+    #[nwg_control(parent: tab_presets, list_style: nwg::ListViewStyle::Simple)]
+    #[nwg_layout_item(layout: presets_grid, col: 0, row: 0)]
+    #[nwg_events(OnListViewItemActivated: [MainWindow::presets_list_item_activated(SELF, EVT_DATA)], OnKeyPress: [MainWindow::presets_list_keypress(SELF, EVT_DATA)])]
+    presets_list: nwg::ListView,
+
+
+
 
     #[nwg_control]
     #[nwg_events( OnNotice: [MainWindow::backend_response] )]
@@ -114,19 +141,14 @@ impl FractalWindow for MainWindow {
 
 impl MainWindow {
     fn main_controls_when_connected(&self, visibility: bool) {
-        self.preset_number.set_visible(visibility);
-        self.preset_name.set_visible(visibility);
-        self.preset_minus.set_visible(visibility);
-        self.preset_plus.set_visible(visibility);
-        self.scene_number.set_visible(visibility);
-        self.scene_name.set_visible(visibility);
-        self.scene_plus.set_visible(visibility);
-        self.scene_minus.set_visible(visibility);
+        //self.tabs_holder.set_visible(visibility);
+        //self.tab_main.set_visible(visibility);
+        //self.tab_presets.set_visible(visibility);
     }
 
     fn init(&self) {
         self.main_controls_when_connected(false);
-        self.send(UiPayload::Connection(PayloadConnection::TryToAutoConnect));        
+        self.send(UiPayload::Connection(PayloadConnection::TryToAutoConnect)); 
     }
 
     fn connect(&self) {
@@ -160,12 +182,20 @@ impl MainWindow {
                 *self.is_connected.borrow_mut() = false;
             },
             Some(UiPayload::DeviceState(DeviceState::PresetAndScene(ref p))) => {
-                self.preset_number.set_text(&format!("{:0>3}", p.preset));
-                self.preset_name.set_text(&p.preset_name);
-                self.scene_number.set_text(&format!("Scene {}", p.scene + 1));
-                self.scene_name.set_text(&p.scene_name);
+                self.main_preset_number.set_text(&format!("{:0>3}", p.preset));
+                self.main_preset_name.set_text(&p.preset_name);
+                self.main_scene_number.set_text(&format!("Scene {}", p.scene + 1));
+                self.main_scene_name.set_text(&p.scene_name);
 
                 *self.device_state.borrow_mut() = Some(p.clone());
+            },
+            Some(UiPayload::Presets(presets)) => {
+                self.presets_list.clear();
+                for p in presets {
+                    self.presets_list.insert_item(format!("{:0>3} {}", p.number, p.name));
+                }
+                self.presets_list.set_visible(true);
+                self.presets_list.set_focus();
             },
             Some(_) => {}
             None => {}
@@ -213,15 +243,49 @@ impl MainWindow {
     fn on_key_press(&self, data: &nwg::EventData) {
         if *self.is_connected.borrow() == false { return; }
 
+        if self.tabs_holder.selected_tab() == 0 {
+            if let nwg::EventData::OnKey(key) = data {
+                if *key == 'W' as u32 {
+                    self.previous_scene();
+                } else if *key == 'S' as u32 {
+                    self.next_scene();
+                } else if *key == 'D' as u32 {
+                    self.next_preset();
+                } else if *key == 'A' as u32 {
+                    self.previous_preset();
+                }
+            }
+        }
+    }
+
+    fn on_tab_changed(&self) {
+        let selected_tab = self.tabs_holder.selected_tab();
+        if selected_tab != usize::max_value() {
+            if selected_tab == 1 {
+                self.presets_list.clear();
+                self.presets_list.set_visible(false);
+                self.send(UiPayload::RequestAllPresets);
+            }
+        }
+    }
+
+    fn presets_list_item_activated(&self, _data: &nwg::EventData) {
+        self.preset_selected();
+    }
+
+    fn presets_list_keypress(&self, data: &nwg::EventData) {
         if let nwg::EventData::OnKey(key) = data {
-            if *key == 'W' as u32 {
-                self.previous_scene();
-            } else if *key == 'S' as u32 {
-                self.next_scene();
-            } else if *key == 'D' as u32 {
-                self.next_preset();
-            } else if *key == 'A' as u32 {
-                self.previous_preset();
+            if *key == ' ' as u32 {
+                self.preset_selected();
+            }
+        }
+    }
+
+    fn preset_selected(&self) {
+        if self.tabs_holder.selected_tab() == 1 && self.presets_list.focus() {
+            if let Some(idx) = self.presets_list.selected_item() {
+                trace!("Selecting preset {}", idx);
+                self.send(UiPayload::DeviceState(payload::DeviceState::SetPreset {preset: idx as u16 }));
             }
         }
     }

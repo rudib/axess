@@ -69,15 +69,15 @@ impl FractalU14 {
 impl From<u16> for FractalU14 {
     fn from(n: u16) -> Self {
         Self {
-            lsb: (n as u8).into(),
-            msb: ((n << 7) as u8).into()
+            lsb: (((n >> 7) & 0x7F) as u8).into(),
+            msb: ((n & 0x7F) as u8).into()
         }
     }
 }
 
 impl Into<u16> for FractalU14 {
     fn into(self) -> u16 {
-        (*self.lsb as u16) | ((*self.msb as u16) << 7)
+        (((*self.lsb as u16) & 0x7F) << 7) | (((*self.msb) & 0x7F) as u16)
     }
 }
 

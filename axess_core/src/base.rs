@@ -3,6 +3,7 @@ quick_error! {
     pub enum FractalCoreError {
         Timeout {}
         Unknown {}
+        NotConnected {}
         Other (val: String) { }
         MissingValue(val: String) { }
         MidirInit(err: midir::InitError) { from() }

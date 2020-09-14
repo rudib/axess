@@ -1,7 +1,7 @@
 use packed_struct::{PackedStructSlice, PackingError, PrimitiveEnum, types::bits::ByteArray};
 
-use crate::{functions::FractalFunction, model::FractalModel};
-use super::{FractalHeader, FractalFooter, FractalMessageChecksum};
+use crate::{functions::FractalFunction, model::FractalModel, messages::preset::PresetHelper};
+use super::{FractalHeader, FractalFooter, FractalMessageChecksum, FractalU14};
 #[derive(Debug, Clone, PartialEq)]
 pub struct FractalAudioMessage<TData> {
     pub header: FractalHeader,
@@ -209,4 +209,20 @@ fn test_generics() {
 
     let unpacked = FractalAudioMessage::<FractalU7>::unpack_from_slice(&packed).unwrap();
     assert_eq!(msg, unpacked);
+}
+
+#[test]
+fn test_numbers() {
+    let bytes = [240, 0, 1, 116, 3, 20, 1, 107, 120, 247];
+    let decoded = FractalAudioMessage::<FractalU14>::unpack_from_slice(&bytes).unwrap();
+    let p: u16 = decoded.data.into();
+    assert_eq!(235, p);
+
+    let bytes = [240, 0, 1, 116, 3, 20, 1, 108, 121, 247];
+    let decoded = FractalAudioMessage::<FractalU14>::unpack_from_slice(&bytes).unwrap();
+    let p: u16 = decoded.data.into();
+    assert_eq!(236, p);
+
+    let packed = decoded.pack_to_vec().unwrap();
+    assert_eq!(&bytes, packed.as_slice());
 }

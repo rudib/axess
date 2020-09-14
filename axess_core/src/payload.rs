@@ -1,4 +1,6 @@
 
+use fractal_protocol::messages::preset::Preset;
+
 use crate::transport::{Endpoint};
 use crate::FractalCoreError;
 
@@ -6,6 +8,10 @@ use crate::FractalCoreError;
 pub enum UiPayload {
     Connection(PayloadConnection),
     DeviceState(DeviceState),
+
+    // when connected
+    RequestAllPresets,
+    Presets(Vec<Preset>),
 
     /// Internal
     Ping,
@@ -27,7 +33,7 @@ pub enum PayloadConnection {
 
     Disconnect,
     
-    // Events
+    // Events    
     ConnectionFailed(FractalCoreError),
     Connected {
         device: fractal_protocol::model::FractalDevice
@@ -56,3 +62,10 @@ pub struct PresetAndScene {
     pub scene: u8,
     pub scene_name: String
 }
+/*
+#[derive(Default, Debug, Clone)]
+pub struct Preset {
+    pub preset: u16,
+    pub preset_name: String,
+}
+*/
