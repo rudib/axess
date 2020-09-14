@@ -52,9 +52,9 @@ pub struct MainWindow {
     #[nwg_layout_item(layout: window_layout, row: 0, col: 0)]
     #[nwg_events( TabsContainerChanged: [MainWindow::on_tab_changed] )]
     tabs_holder: TabsContainer,
-    #[nwg_control(parent: tabs_holder, text: "Main")]
+    #[nwg_control(parent: tabs_holder, text: "&Main")]
     tab_main: Tab,
-    #[nwg_control(parent: tabs_holder, text: "Presets")]
+    #[nwg_control(parent: tabs_holder, text: "&Presets")]
     tab_presets: Tab,
 
 
@@ -159,7 +159,7 @@ impl MainWindow {
 
     fn init(&self) {
         self.main_controls_when_connected(false);
-        self.send(UiPayload::Connection(PayloadConnection::TryToAutoConnect)); 
+        self.send(UiPayload::Connection(PayloadConnection::TryToAutoConnect));
     }
 
     fn connect(&self) {
@@ -207,6 +207,10 @@ impl MainWindow {
                 }
                 self.presets_list.set_visible(true);
                 self.presets_list.set_focus();
+
+                if let Some(ref state) = *self.device_state.borrow() {
+                    self.presets_list.select_item(state.preset as usize, true);
+                }
             },
             Some(UiPayload::Scenes(scenes)) => {
                 self.scenes_list.clear();
@@ -214,6 +218,10 @@ impl MainWindow {
                     self.scenes_list.insert_item(format!("Scene {} {}", s.number, s.name));
                 }
                 self.scenes_list.set_visible(true);
+
+                if let Some(ref state) = *self.device_state.borrow() {
+                    self.scenes_list.select_item(state.scene as usize, true);
+                }
             }
             Some(_) => {}
             None => {}
@@ -286,7 +294,8 @@ impl MainWindow {
                 self.presets_list.clear();                
                 self.scenes_list.clear();
                 
-                self.send(UiPayload::RequestAllPresets);
+                self.send(UiPayload::RequestAllPresets);                
+                self.send(UiPayload::RequestScenes);
             }
         }
     }
