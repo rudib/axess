@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use crate::{structs::{FractalAudioMessage, Data, FractalU7}, functions::FractalFunction, model::FractalModel};
+use crate::{structs::{FractalAudioMessage, Data, FractalU7}, functions::FractalFunction, model::FractalModel, structs::DataVoid};
 use crate::FractalProtocolError;
 use super::MessageHelper;
 
@@ -28,6 +28,10 @@ pub struct MultipurposeResponseHelper;
 impl MultipurposeResponseHelper {
     pub fn get_discovery_request() -> Vec<u8> {
         vec![0xF0, 0x0, 0x1, 0x74, 0x7F, 0x0, 0x7A, 0xF7]
+    }
+
+    pub fn disconnect_from_controller(model: FractalModel) -> FractalAudioMessage<DataVoid> {
+        FractalAudioMessage::new(model, FractalFunction::DISCONNECT_FROM_CONTROLLER, DataVoid)
     }
 }
 

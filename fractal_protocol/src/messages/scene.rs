@@ -39,6 +39,10 @@ impl SceneHelper {
     pub fn get_scene_info(model: FractalModel, scene: u8) -> FractalAudioMessage<FractalU7> {
         FractalAudioMessage::new(model, FractalFunction::GET_SCENE_NAME, scene.into())
     }
+
+    pub fn set_current_scene_number(model: FractalModel, scene: u8) -> FractalAudioMessage<FractalU7> {
+        FractalAudioMessage::new(model, FractalFunction::GET_SET_SCENE, scene.into())
+    }
 }
 
 impl MessageHelper for SceneHelper {

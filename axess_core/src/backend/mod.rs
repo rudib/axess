@@ -4,7 +4,7 @@ use state::DeviceState;
 use packed_struct::PackedStructSlice;
 use crate::{payload::{PayloadConnection, UiPayload}, FractalResult, FractalResultVoid, utils::filter_first};
 use crate::transport::{Transport, midi::{Midi}, serial::TransportSerial, Endpoint};
-use fractal_protocol::{model::{FractalDevice}, buffer::MessagesBuffer, messages::firmware_version::FirmwareVersionHelper, messages::FractalAudioMessages, messages::multipurpose_response::MultipurposeResponseHelper};
+use fractal_protocol::{model::{FractalDevice}, buffer::MessagesBuffer, messages::firmware_version::FirmwareVersionHelper, messages::FractalAudioMessages, messages::multipurpose_response::MultipurposeResponseHelper, messages::scene::SceneHelper};
 use std::{time::Duration, thread, pin::Pin};
 use log::{error, trace};
 use tokio::runtime::Runtime;
@@ -104,7 +104,7 @@ impl UiBackend {
                         },
                         UiPayload::DeviceState(crate::payload::DeviceState::SetScene { scene }) => {
                             if let Some(ref mut device) = self.device {
-                                device.transport_endpoint.write(&set_scene_number(device.device.model, scene));
+                                device.transport_endpoint.write(&SceneHelper::set_current_scene_number(device.device.model, scene).pack_to_vec().unwrap());
                             }
 
                             tokio::time::delay_for(Duration::from_millis(10)).await;
@@ -174,7 +174,7 @@ impl UiBackend {
 
             PayloadConnection::Disconnect => {
                 if let Some(mut device) = self.device.take() {
-                    device.transport_endpoint.write(&disconnect_from_controller(device.device.model))?;
+                    device.transport_endpoint.write(&MultipurposeResponseHelper::disconnect_from_controller(device.device.model).pack_to_vec().unwrap())?;
                 }
                 
                 self.send(UiPayload::Connection(PayloadConnection::Disconnected)).await?;
