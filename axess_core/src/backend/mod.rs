@@ -4,7 +4,7 @@ use state::DeviceState;
 use packed_struct::PackedStructSlice;
 use crate::{payload::{PayloadConnection, UiPayload}, FractalResult, FractalResultVoid, utils::filter_first};
 use crate::transport::{Transport, midi::{Midi}, serial::TransportSerial, Endpoint};
-use fractal_protocol::{model::{FractalDevice}, buffer::MessagesBuffer, messages::firmware_version::FirmwareVersionHelper, messages::FractalAudioMessages, messages::multipurpose_response::MultipurposeResponseHelper, messages::scene::SceneHelper, messages::preset::PresetHelper};
+use fractal_protocol::{model::{FractalDevice}, buffer::MessagesBuffer, messages::firmware_version::FirmwareVersionHelper, messages::FractalAudioMessages, messages::multipurpose_response::MultipurposeResponseHelper, messages::scene::SceneHelper, messages::preset::PresetHelper, messages::scene::SceneWithNameHelper};
 use std::{time::Duration, thread, pin::Pin};
 use log::{error, trace};
 use tokio::runtime::Runtime;
@@ -122,7 +122,7 @@ impl UiBackend {
             },
             UiPayload::DeviceState(crate::payload::DeviceState::SetScene { scene }) => {
                 if let Some(ref mut device) = self.device {
-                    device.transport_endpoint.write(&SceneHelper::set_current_scene_number(device.device.model, scene).pack_to_vec()?)?;
+                    device.transport_endpoint.write(&SceneWithNameHelper::set_current_scene_number(device.device.model, scene).pack_to_vec()?)?;
                 }
 
                 tokio::time::delay_for(Duration::from_millis(10)).await;
@@ -137,7 +137,7 @@ impl UiBackend {
                 for i in 0..presets_count {
                     let preset = device.send_and_wait_for(&PresetHelper::get_preset_info(device.device.model, i).pack_to_vec()?, |msg| {
                             match msg {
-                                FractalAudioMessages::Preset(preset) => {
+                                FractalAudioMessages::PresetAndName(preset) => {
                                     Some(preset.clone())
                                 },
                                 _ => None
@@ -154,9 +154,9 @@ impl UiBackend {
 
                 let mut scenes = vec![];
                 for i in 0..scenes_count {
-                    let scene = device.send_and_wait_for(&SceneHelper::get_scene_info(device.device.model, i).pack_to_vec()?, |msg| {
+                    let scene = device.send_and_wait_for(&SceneWithNameHelper::get_scene_info(device.device.model, i).pack_to_vec()?, |msg| {
                         match msg {
-                            FractalAudioMessages::Scene(scene) => {
+                            FractalAudioMessages::SceneWithName(scene) => {
                                 Some(scene.clone())
                             },
                             _ => None

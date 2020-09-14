@@ -11,7 +11,7 @@ pub const SYSEX_END: u8 = 0xF7;
 pub const SYSEX_MANUFACTURER: [u8; 3] = [SYSEX_MANUFACTURER_BYTE1, SYSEX_MANUFACTURER_BYTE2, SYSEX_MANUFACTURER_BYTE3];
 pub const SYSEX_HEADER: [u8; 4] = [SYSEX_START, SYSEX_MANUFACTURER_BYTE1, SYSEX_MANUFACTURER_BYTE2, SYSEX_MANUFACTURER_BYTE3];
 
-
+#[derive(Debug)]
 pub struct MessagesBuffer {
     buffer: Vec<u8>
 }
@@ -26,7 +26,7 @@ impl MessagesBuffer {
     // todo: parse ALL messages in the buffer
     pub fn parse(&mut self, msg: &[u8]) -> Option<FractalAudioMessages> {
         self.buffer.extend(msg);
-
+        
         // find the first sysex message in the buffer
         for i in 0..self.buffer.len() {
             if self.buffer[i..].starts_with(&SYSEX_HEADER) {
@@ -40,7 +40,7 @@ impl MessagesBuffer {
                                     return Some(msg);
                                 }
                                 Err(e) => {
-                                    trace!("Failed to parsed SYSEX, entire buffer: {:X?}. Error message {:?}", &self.buffer, e);
+                                    trace!("Failed to parsed SYSEX, entire buffer: {:X?}. Error message {:?}. Our msg buffer: {:#X?}", &self.buffer, e, &self.buffer[i..n+1]);
                                 }
                             }
                         }

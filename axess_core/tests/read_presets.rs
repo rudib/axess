@@ -3,6 +3,7 @@ use axess_core::{FractalCoreError, transport::midi::Midi, backend::UiBackend, tr
 use packed_struct::PackedStructSlice;
 
 #[test]
+#[ignore = "needs a single physical device"]
 fn read_all_presets() -> Result<(), FractalCoreError> {
 
     async fn test() -> Result<(), FractalCoreError> {
