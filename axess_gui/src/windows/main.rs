@@ -35,12 +35,25 @@ pub struct MainWindow {
     menu_device_exit: nwg::MenuItem,
 
 
+    #[nwg_control(text: "&View")]
+    menu_view: nwg::Menu,
+
+    #[nwg_control(text: "&Main", parent: menu_view)]
+    #[nwg_events( OnMenuItemSelected: [MainWindow::on_menu_view_main] )]
+    menu_view_main: nwg::MenuItem,
+
+    #[nwg_control(text: "&Presets", parent: menu_view)]
+    #[nwg_events( OnMenuItemSelected: [MainWindow::on_menu_view_presets] )]
+    menu_view_presets: nwg::MenuItem,
+
+
+    /*
     #[nwg_control(text: "&Help")]
     menu_help: nwg::Menu,
 
     #[nwg_control(text: "About", parent: menu_help)]
     menu_help_about: nwg::MenuItem,
-
+    */
 
     #[nwg_control(text: NOT_CONNECTED, parent: window)]
     status_bar: nwg::StatusBar,
@@ -50,7 +63,7 @@ pub struct MainWindow {
 
     #[nwg_control(parent: window)]
     #[nwg_layout_item(layout: window_layout, row: 0, col: 0)]
-    #[nwg_events( TabsContainerChanged: [MainWindow::on_tab_changed] )]
+    #[nwg_events(TabsContainerChanged: [MainWindow::on_tab_changed])]
     tabs_holder: TabsContainer,
     #[nwg_control(parent: tabs_holder, text: "&Main")]
     tab_main: Tab,
@@ -103,7 +116,7 @@ pub struct MainWindow {
     #[nwg_layout(parent: tab_presets)]
     presets_grid: nwg::GridLayout,
 
-    #[nwg_control(parent: tab_presets, text: "Presets")]
+    #[nwg_control(parent: tab_presets, text: "Presets (use SPACE to select)")]
     #[nwg_layout_item(layout: presets_grid, row: 0, col: 0)]
     presets_label_presets: nwg::Label,
 
@@ -340,5 +353,15 @@ impl MainWindow {
                 self.send(UiPayload::DeviceState(payload::DeviceState::SetScene {scene: idx as u8 }));
             }
         }
+    }
+
+    fn on_menu_view_main(&self) {
+        self.tabs_holder.set_selected_tab(0);
+        self.on_tab_changed();
+    }
+
+    fn on_menu_view_presets(&self) {
+        self.tabs_holder.set_selected_tab(1);
+        self.on_tab_changed();
     }
 }
