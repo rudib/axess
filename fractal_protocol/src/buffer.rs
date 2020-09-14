@@ -1,6 +1,16 @@
 use log::trace;
 
-use crate::{message::FractalMessageWrapper, message2::SYSEX_HEADER, message2::SYSEX_END, message2::validate_and_decode_message, messages::parse_sysex_message, messages::FractalAudioMessages};
+use crate::{messages::parse_sysex_message, messages::FractalAudioMessages};
+
+pub const SYSEX_START: u8 = 0xF0;
+pub const SYSEX_MANUFACTURER_BYTE1: u8 = 0x00;
+pub const SYSEX_MANUFACTURER_BYTE2: u8 = 0x01;
+pub const SYSEX_MANUFACTURER_BYTE3: u8 = 0x74;
+pub const SYSEX_END: u8 = 0xF7;
+
+pub const SYSEX_MANUFACTURER: [u8; 3] = [SYSEX_MANUFACTURER_BYTE1, SYSEX_MANUFACTURER_BYTE2, SYSEX_MANUFACTURER_BYTE3];
+pub const SYSEX_HEADER: [u8; 4] = [SYSEX_START, SYSEX_MANUFACTURER_BYTE1, SYSEX_MANUFACTURER_BYTE2, SYSEX_MANUFACTURER_BYTE3];
+
 
 pub struct MessagesBuffer {
     buffer: Vec<u8>

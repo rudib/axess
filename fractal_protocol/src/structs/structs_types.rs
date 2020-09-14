@@ -6,16 +6,15 @@ use packed_struct::PrimitiveEnum;
 //use packed_struct::prelude::*;
 
 use crate::{
-    effect::EffectId, functions::FractalFunction, message2::SYSEX_END, message2::SYSEX_HEADER,
-    message2::SYSEX_MANUFACTURER, message2::SYSEX_START, model::FractalModel,
-};
+    effect::EffectId, functions::FractalFunction, model::FractalModel,
+buffer::SYSEX_END, buffer::SYSEX_START, buffer::SYSEX_MANUFACTURER};
 
 #[derive(Debug, Copy, Clone, PackedStruct, PartialEq, Eq)]
 pub struct FractalHeader {
     pub sysex_message_start: u8,
     pub sysex_manufacturer: [u8; 3],
     #[packed_field(element_size_bytes = "1", ty = "enum")]
-    pub model: FractalModel    
+    pub model: FractalModel
 }
 
 impl FractalHeader {

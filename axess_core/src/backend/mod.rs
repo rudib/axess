@@ -4,7 +4,7 @@ use state::DeviceState;
 use packed_struct::PackedStructSlice;
 use crate::{payload::{PayloadConnection, UiPayload}, FractalResult, FractalResultVoid, utils::filter_first, transport::TransportEndpoint};
 use crate::transport::{Transport, midi::{Midi}, TransportConnection, serial::TransportSerial, Endpoint};
-use fractal_protocol::{model::{FractalDevice}, common::{disconnect_from_controller, set_scene_number}, buffer::MessagesBuffer, messages::firmware_version::FirmwareVersionHelper, messages::FractalAudioMessages, messages::multipurpose_response::MultipurposeResponseHelper};
+use fractal_protocol::{model::{FractalDevice}, buffer::MessagesBuffer, messages::firmware_version::FirmwareVersionHelper, messages::FractalAudioMessages, messages::multipurpose_response::MultipurposeResponseHelper};
 use std::{time::Duration, thread, pin::Pin};
 use log::{error, trace};
 use tokio::runtime::Runtime;
