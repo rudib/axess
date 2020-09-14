@@ -4,7 +4,7 @@ use state::DeviceState;
 use packed_struct::PackedStructSlice;
 use crate::{payload::{PayloadConnection, UiPayload}, FractalResult, FractalResultVoid, utils::filter_first};
 use crate::transport::{Transport, midi::{Midi}, serial::TransportSerial, Endpoint};
-use fractal_protocol::{model::{FractalDevice}, buffer::MessagesBuffer, messages::firmware_version::FirmwareVersionHelper, messages::FractalAudioMessages, messages::multipurpose_response::MultipurposeResponseHelper, messages::scene::SceneHelper, messages::preset::PresetHelper, messages::scene::SceneWithNameHelper};
+use fractal_protocol::{model::{FractalDevice}, buffer::MessagesBuffer, messages::firmware_version::FirmwareVersionHelper, messages::FractalAudioMessages, messages::multipurpose_response::MultipurposeResponseHelper,  messages::preset::PresetHelper, messages::scene::SceneWithNameHelper};
 use std::{time::Duration, thread, pin::Pin};
 use log::{error, trace};
 use tokio::runtime::Runtime;
@@ -135,14 +135,8 @@ impl UiBackend {
         
                 let mut presets = vec![];
                 for i in 0..presets_count {
-                    let preset = device.send_and_wait_for(&PresetHelper::get_preset_info(device.device.model, i).pack_to_vec()?, |msg| {
-                            match msg {
-                                FractalAudioMessages::PresetAndName(preset) => {
-                                    Some(preset.clone())
-                                },
-                                _ => None
-                            }
-                        }).await.map_err(|_| FractalCoreError::MissingValue("Preset".into()))?;
+                    let preset = device.send_and_wait_for(&PresetHelper::get_preset_info(device.device.model, i).pack_to_vec()?)
+                        .await.map_err(|_| FractalCoreError::MissingValue("Preset".into()))?;
                     presets.push(preset);
                 }
 
@@ -154,14 +148,8 @@ impl UiBackend {
 
                 let mut scenes = vec![];
                 for i in 0..scenes_count {
-                    let scene = device.send_and_wait_for(&SceneWithNameHelper::get_scene_info(device.device.model, i).pack_to_vec()?, |msg| {
-                        match msg {
-                            FractalAudioMessages::SceneWithName(scene) => {
-                                Some(scene.clone())
-                            },
-                            _ => None
-                        }
-                    }).await.map_err(|_| FractalCoreError::MissingValue("Scene".into()))?;
+                    let scene = device.send_and_wait_for(&SceneWithNameHelper::get_scene_info(device.device.model, i).pack_to_vec()?)
+                        .await.map_err(|_| FractalCoreError::MissingValue("Scene".into()))?;
                     scenes.push(scene);
                 }
 

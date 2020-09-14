@@ -14,25 +14,21 @@ use crate::{functions::FractalFunction, structs::FractalAudioMessageFunction};
 use crate::FractalProtocolError;
 use crate::packed_struct::PackedStructSlice;
 
-use enum_derive_2018::EnumFromInner;
-use macro_attr_2018::macro_attr;
-
 pub trait MessageHelper where <Self::Response as TryFrom<Self::RawResponse>>::Error : Debug {
     type RawResponse : packed_struct::PackedStructSlice + FractalAudioMessageFunction;
     type Response : TryFrom<Self::RawResponse> + Into<FractalAudioMessages>;
 
     fn response_function() -> FractalFunction;
 }
-macro_attr! {
-    #[derive(Debug, Clone, EnumFromInner!)]
-    pub enum FractalAudioMessages {
-        FirmwareVersion(FirmwareVersion),
-        MultipurposeResponse(MultipurposeResponse),
-        PresetAndName(PresetAndName),
-        Preset(Preset),
-        SceneWithName(SceneWithName),
-        Scene(Scene)
-    }
+
+#[derive(Debug, Clone, From, TryInto)]
+pub enum FractalAudioMessages {
+    FirmwareVersion(FirmwareVersion),
+    MultipurposeResponse(MultipurposeResponse),
+    PresetAndName(PresetAndName),
+    Preset(Preset),
+    SceneWithName(SceneWithName),
+    Scene(Scene)
 }
 
 pub fn parse_sysex_message(msg: &[u8]) -> Result<FractalAudioMessages, FractalProtocolError> {

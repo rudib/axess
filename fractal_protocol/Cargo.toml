@@ -15,5 +15,4 @@ packed_struct_codegen = "0.3"
 quick-error = "2.0"
 
 
-macro-attr-2018 = "0.3.3"
-enum-derive-2018 = "0.2.1"
+derive_more = "0.99.10"

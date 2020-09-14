@@ -1,7 +1,7 @@
-use std::time::Duration;
+use std::{time::Duration, convert::TryInto, convert::TryFrom};
 
 use broadcaster::BroadcastChannel;
-use fractal_protocol::{model::FractalDevice, messages::FractalAudioMessages, messages::preset::PresetHelper, messages::scene::SceneHelper, messages::scene::SceneWithNameHelper};
+use fractal_protocol::{model::FractalDevice, messages::FractalAudioMessages, messages::preset::PresetHelper, messages::scene::SceneHelper, messages::scene::SceneWithNameHelper, messages::preset::PresetAndName, messages::scene::SceneWithName};
 
 use crate::{transport::TransportConnection, FractalResult, utils::filter_first};
 use crate::FractalCoreError;
@@ -17,8 +17,8 @@ pub struct ConnectedDevice {
 
 
 impl ConnectedDevice {
-    pub async fn send_and_wait_for<F, T>(&mut self, msg: &[u8], mut filter_map: F) -> FractalResult<T>
-        where F: FnMut(&FractalAudioMessages) -> Option<T>
+    pub async fn send_and_wait_for<T>(&mut self, msg: &[u8]) -> FractalResult<T>
+        where T: TryInto<T> + TryFrom<FractalAudioMessages>
     {
         let timeout = Duration::from_millis(500);
     
@@ -27,32 +27,19 @@ impl ConnectedDevice {
         self.transport_endpoint.write(msg)?;
 
         let r = filter_first(&mut channel, |m| {
-            filter_map(&m)
+            let ms = m.try_into();
+            ms.ok()
         }, timeout).await?;
 
         Ok(r)
     }
 
     pub async fn update_state(&mut self) -> FractalResult<bool> {
-        let preset = self.send_and_wait_for(&PresetHelper::get_current_preset_info(self.device.model).pack_to_vec()?,
-|msg| {
-                match msg {
-                    FractalAudioMessages::PresetAndName(preset) => {
-                        Some(preset.clone())
-                    },
-                    _ => None
-                }
-            }).await.map_err(|_| FractalCoreError::MissingValue("Preset".into()))?;
+        let preset = self.send_and_wait_for::<PresetAndName>(&PresetHelper::get_current_preset_info(self.device.model).pack_to_vec()?)
+                    .await.map_err(|_| FractalCoreError::MissingValue("Preset".into()))?;
 
-        let scene = self.send_and_wait_for(&SceneWithNameHelper::get_current_scene_info(self.device.model).pack_to_vec()?, 
-|msg| {
-                match msg {
-                    FractalAudioMessages::SceneWithName(scene) => {
-                        Some(scene.clone())
-                    },
-                    _ => None
-                }
-            }).await.map_err(|_| FractalCoreError::MissingValue("Scene".into()))?;
+        let scene = self.send_and_wait_for::<SceneWithName>(&SceneWithNameHelper::get_current_scene_info(self.device.model).pack_to_vec()?)
+                    .await.map_err(|_| FractalCoreError::MissingValue("Scene".into()))?;
         
         let device_state = DeviceState {
             preset_number: preset.number.into(),

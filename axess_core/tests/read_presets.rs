@@ -1,4 +1,4 @@
-use fractal_protocol::messages::{preset::PresetHelper, FractalAudioMessages, scene::SceneHelper};
+use fractal_protocol::messages::{preset::PresetHelper, FractalAudioMessages, scene::SceneHelper, preset::PresetAndName};
 use axess_core::{FractalCoreError, transport::midi::Midi, backend::UiBackend, transport::Transport};
 use packed_struct::PackedStructSlice;
 
@@ -28,16 +28,8 @@ fn read_all_presets() -> Result<(), FractalCoreError> {
 
         //for i in 0..total_presets {
         for i in 0..512 {
-            let preset = connection.send_and_wait_for(&PresetHelper::get_preset_info(connection.device.model, i).pack_to_vec()?,
-|msg| {
-                match msg {
-                    FractalAudioMessages::Preset(preset) => {
-                        Some(preset.clone())
-                    },
-                    _ => None
-                }
-            }).await.map_err(|_| FractalCoreError::MissingValue("Preset".into()))?;
-
+            let preset: PresetAndName = connection.send_and_wait_for(&PresetHelper::get_preset_info(connection.device.model, i).pack_to_vec()?)
+                .await.map_err(|_| FractalCoreError::MissingValue("Preset".into()))?;
             println!("preset: {:?}", preset);
         }
 
