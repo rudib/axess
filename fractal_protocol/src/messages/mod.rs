@@ -7,7 +7,7 @@ use std::{convert::TryFrom, fmt::Debug};
 use log::error;
 use preset::{Preset, PresetHelper, PresetAndName, PresetAndNameHelper};
 use scene::{SceneWithName, SceneHelper, Scene, SceneWithNameHelper};
-use firmware_version::{FirmwareVersion, FirmwareVersionHelper};
+use firmware_version::{FirmwareVersion, FirmwareVersionHelper, FirmwareVersionShortHelper};
 use multipurpose_response::{MultipurposeResponse, MultipurposeResponseHelper};
 
 use crate::{functions::FractalFunction, structs::FractalAudioMessageFunction};
@@ -41,6 +41,7 @@ pub fn parse_sysex_message(msg: &[u8]) -> Result<FractalAudioMessages, FractalPr
     decoder.try_decode::<SceneHelper>(msg);
     decoder.try_decode::<SceneWithNameHelper>(msg);
     decoder.try_decode::<FirmwareVersionHelper>(msg);
+    decoder.try_decode::<FirmwareVersionShortHelper>(msg);
     decoder.try_decode::<MultipurposeResponseHelper>(msg);
 
     decoder.decoded.ok_or(FractalProtocolError::UnknownMessage)
