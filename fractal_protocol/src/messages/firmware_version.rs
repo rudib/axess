@@ -10,6 +10,7 @@ use crate::{
 };
 
 use packed_struct::types::bits::*;
+use packed_struct::PackedStructSlice;
 
 #[derive(Debug, Clone)]
 pub struct FirmwareVersion {
@@ -90,6 +91,8 @@ fn test_parse_resp_fm3() {
     let raw = [
         0xF0, 0x0, 0x1, 0x74, 0x11, 0x8, 0x1, 0x5, 0x0, 0x0, 0x18, 0xF7,
     ];
+
+    let fm3_firmware = RawShort::unpack_from_slice(&raw).unwrap();
 
     let decoded = parse_sysex_message(&raw).unwrap();
     let msg: FirmwareVersion = decoded.try_into().unwrap();

@@ -173,7 +173,8 @@ pub enum EffectId {
     ID_IRPLAYER3,
     ID_IRPLAYER4,
     ID_FOOTCONTROLLER,
-    ID_PRESET_FC,    
+    ID_PRESET_FC,
+    ID_EFFECTS_END
 }
 
 #[test]

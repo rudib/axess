@@ -21,5 +21,6 @@ quick_error! {
         CrcMismatch {}
         UnknownMessage {}
         MessageConversionError {}
+        UnknownValue {param: String, value: String}
     }
 }

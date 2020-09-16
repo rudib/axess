@@ -137,6 +137,7 @@ impl<TBytes> PackedStructSlice for DataBytes<TBytes> where TBytes: packed_struct
     fn unpack_from_slice(src: &[u8]) -> Result<Self, PackingError> {
         let mut bytes = TBytes::AsBytes::new(0);
         let slice = bytes.as_mut_bytes_slice();
+        if slice.len() != src.len() { return Err(PackingError::BufferSizeMismatch { expected: slice.len(), actual: src.len() }); }
         slice.copy_from_slice(src);
 
         Ok(DataBytes {
