@@ -29,3 +29,4 @@ wmi = "0.5"
 
 [dev-dependencies]
 tokio-test="*"
+log4rs = "0.13"

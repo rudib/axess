@@ -10,8 +10,13 @@ edition = "2018"
 
 [dependencies]
 log = "0.4"
-packed_struct = "0.3"
-packed_struct_codegen = "0.3"
+#packed_struct = "0.3"
+#packed_struct_codegen = "0.3"
+
+packed_struct = { git = "https://github.com/hashmismatch/packed_struct.rs", branch = "slice_v2" }
+packed_struct_codegen = { git = "https://github.com/hashmismatch/packed_struct.rs", branch = "slice_v2" }
+
+
 quick-error = "2.0"
 
 

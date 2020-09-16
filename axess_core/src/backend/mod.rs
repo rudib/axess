@@ -2,7 +2,7 @@ use broadcaster::BroadcastChannel;
 use connected_device::ConnectedDevice;
 use state::DeviceState;
 use packed_struct::PackedStructSlice;
-use crate::{payload::{PayloadConnection, UiPayload}, FractalResult, FractalResultVoid, utils::filter_first};
+use crate::{payload::{PayloadConnection, UiPayload}, FractalResult, FractalResultVoid, utils::filter_first, transport::write_struct};
 use crate::transport::{Transport, midi::{Midi}, serial::TransportSerial, Endpoint};
 use fractal_protocol::{model::{FractalDevice}, buffer::MessagesBuffer, messages::firmware_version::FirmwareVersionHelper, messages::FractalAudioMessages, messages::multipurpose_response::MultipurposeResponseHelper,  messages::preset::PresetHelper, messages::scene::SceneWithNameHelper};
 use std::{time::Duration, thread, pin::Pin};
@@ -122,7 +122,7 @@ impl UiBackend {
             },
             UiPayload::DeviceState(crate::payload::DeviceState::SetScene { scene }) => {
                 if let Some(ref mut device) = self.device {
-                    device.transport_endpoint.write(&SceneWithNameHelper::set_current_scene_number(device.device.model, scene).pack_to_vec()?)?;
+                    device.write(&SceneWithNameHelper::set_current_scene_number(device.device.model, scene))?;
                 }
 
                 tokio::time::delay_for(Duration::from_millis(10)).await;
@@ -135,7 +135,7 @@ impl UiBackend {
         
                 let mut presets = vec![];
                 for i in 0..presets_count {
-                    let preset = device.send_and_wait_for(&PresetHelper::get_preset_info(device.device.model, i).pack_to_vec()?)
+                    let preset = device.send_and_wait_for(&PresetHelper::get_preset_info(device.device.model, i))
                         .await.map_err(|_| FractalCoreError::MissingValue("Preset".into()))?;
                     presets.push(preset);
                 }
@@ -148,7 +148,7 @@ impl UiBackend {
 
                 let mut scenes = vec![];
                 for i in 0..scenes_count {
-                    let scene = device.send_and_wait_for(&SceneWithNameHelper::get_scene_info(device.device.model, i).pack_to_vec()?)
+                    let scene = device.send_and_wait_for(&SceneWithNameHelper::get_scene_info(device.device.model, i))
                         .await.map_err(|_| FractalCoreError::MissingValue("Scene".into()))?;
                     scenes.push(scene);
                 }
@@ -341,7 +341,7 @@ impl UiBackend {
         trace!("Detected Fractal Model {:?}", model);
 
         // request the firmware version
-        connection.write(&FirmwareVersionHelper::get_request(model).pack_to_vec()?)?;
+        write_struct(&*connection, &FirmwareVersionHelper::get_request(model))?;
 
         let firmware = filter_first(&mut midi_messages, |msg| {
             match msg {

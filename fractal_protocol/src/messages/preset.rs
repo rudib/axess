@@ -4,7 +4,7 @@ use super::MessageHelper;
 use crate::{FractalProtocolError, model::FractalModel};
 use crate::{
     functions::FractalFunction,
-    structs::{Data, FractalAudioMessage, FractalString32, FractalU14},
+    structs::{FractalAudioMessage, FractalString32, FractalU14},
 };
 #[derive(Debug, Clone)]
 pub struct PresetAndName {
@@ -16,7 +16,7 @@ pub struct Preset {
     pub number: u16
 }
 
-type Raw = FractalAudioMessage<Data<FractalU14, FractalString32>>;
+type Raw = FractalAudioMessage<(FractalU14, FractalString32)>;
 
 impl TryFrom<Raw> for PresetAndName {
     type Error = FractalProtocolError;

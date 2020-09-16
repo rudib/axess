@@ -6,8 +6,7 @@ use crate::{
     functions::FractalFunction,
     model::FractalModel,
     structs::DataBytes,
-    structs::DataVoid,
-    structs::{Data, FractalAudioMessage, FractalU7},
+    structs::{FractalAudioMessage, FractalU7},
 };
 
 use packed_struct::types::bits::*;
@@ -18,8 +17,8 @@ pub struct FirmwareVersion {
     pub minor: u8,
 }
 
-type Raw = FractalAudioMessage<Data<FractalU7, Data<FractalU7, DataBytes<Bytes5>>>>;
-type RawShort = FractalAudioMessage<Data<FractalU7, Data<FractalU7, DataBytes<Bytes2>>>>;
+type Raw = FractalAudioMessage<(FractalU7, (FractalU7, DataBytes<Bytes5>))>;
+type RawShort = FractalAudioMessage<(FractalU7, (FractalU7, DataBytes<Bytes2>))>;
 
 impl TryFrom<Raw> for FirmwareVersion {
     type Error = FractalProtocolError;
@@ -48,8 +47,8 @@ impl TryFrom<RawShort> for FirmwareVersion {
 pub struct FirmwareVersionHelper;
 
 impl FirmwareVersionHelper {
-    pub fn get_request(model: FractalModel) -> FractalAudioMessage<DataVoid> {
-        FractalAudioMessage::new(model, FractalFunction::GET_FIRMWARE_VERSION, DataVoid)
+    pub fn get_request(model: FractalModel) -> FractalAudioMessage<()> {
+        FractalAudioMessage::new(model, FractalFunction::GET_FIRMWARE_VERSION, ())
     }
 }
 

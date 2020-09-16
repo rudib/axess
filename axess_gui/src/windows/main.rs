@@ -10,6 +10,13 @@ use crate::windows::main::main_window_ui::MainWindowUi;
 
 const NOT_CONNECTED: &'static str = "Not connected.";
 
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+enum Tabs {
+    Main,
+    Presets,
+    Blocks
+}
+
 #[derive(NwgUi, Default)]
 pub struct MainWindow {
     #[nwg_control(title: "Axess Fractal Audio Editor", size: (800, 600), flags: "MAIN_WINDOW|VISIBLE")]
@@ -37,14 +44,15 @@ pub struct MainWindow {
 
     #[nwg_control(text: "&View")]
     menu_view: nwg::Menu,
-
     #[nwg_control(text: "&Main", parent: menu_view)]
     #[nwg_events( OnMenuItemSelected: [MainWindow::on_menu_view_main] )]
     menu_view_main: nwg::MenuItem,
-
     #[nwg_control(text: "&Presets", parent: menu_view)]
     #[nwg_events( OnMenuItemSelected: [MainWindow::on_menu_view_presets] )]
     menu_view_presets: nwg::MenuItem,
+    #[nwg_control(text: "&Blocks", parent: menu_view)]
+    #[nwg_events( OnMenuItemSelected: [MainWindow::on_menu_view_blocks] )]
+    menu_view_blocks: nwg::MenuItem,
 
 
     /*
@@ -69,6 +77,8 @@ pub struct MainWindow {
     tab_main: Tab,
     #[nwg_control(parent: tabs_holder, text: "&Presets")]
     tab_presets: Tab,
+    #[nwg_control(parent: tabs_holder, text: "&Blocks")]
+    tab_blocks: Tab,
 
 
 
@@ -362,6 +372,11 @@ impl MainWindow {
 
     fn on_menu_view_presets(&self) {
         self.tabs_holder.set_selected_tab(1);
+        self.on_tab_changed();
+    }
+
+    fn on_menu_view_blocks(&self) {
+        self.tabs_holder.set_selected_tab(2);
         self.on_tab_changed();
     }
 }

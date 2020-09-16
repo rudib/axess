@@ -4,7 +4,7 @@ use super::MessageHelper;
 use crate::{FractalProtocolError, model::FractalModel};
 use crate::{
     functions::FractalFunction,
-    structs::{Data, FractalAudioMessage, FractalString32, FractalU7},
+    structs::{FractalAudioMessage, FractalString32, FractalU7},
 };
 #[derive(Debug, Clone)]
 pub struct SceneWithName {
@@ -17,11 +17,11 @@ pub struct Scene {
     pub number: u8
 }
 
-impl TryFrom<FractalAudioMessage<Data<FractalU7, FractalString32>>> for SceneWithName {
+impl TryFrom<FractalAudioMessage<(FractalU7, FractalString32)>> for SceneWithName {
     type Error = FractalProtocolError;
 
     fn try_from(
-        value: FractalAudioMessage<Data<FractalU7, FractalString32>>,
+        value: FractalAudioMessage<(FractalU7, FractalString32)>,
     ) -> Result<Self, Self::Error> {
         Ok(SceneWithName {
             number: value.data.0.into(),
@@ -64,7 +64,7 @@ impl SceneWithNameHelper {
 }
 
 impl MessageHelper for SceneWithNameHelper {
-    type RawResponse = FractalAudioMessage<Data<FractalU7, FractalString32>>;
+    type RawResponse = FractalAudioMessage<(FractalU7, FractalString32)>;
     type Response = SceneWithName;
 
     fn response_function() -> crate::functions::FractalFunction {

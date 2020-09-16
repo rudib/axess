@@ -29,3 +29,8 @@ pub trait TransportConnection {
     fn get_receiver(&self) -> &Receiver<TransportMessage>;
     fn write(&mut self, buf: &[u8]) -> FractalResultVoid;
 }
+
+pub fn write_struct<P: packed_struct::PackedStructSlice>(connection: &TransportConnection, s: &P) -> FractalResultVoid {
+    let msg = s.pack_to_vec()?;
+    connection.write(&msg)
+}

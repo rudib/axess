@@ -37,13 +37,13 @@ impl<TData> FractalAudioMessage<TData> where TData: PackedStructSlice {
 
 impl<TData> PackedStructSlice for FractalAudioMessage<TData> where TData: PackedStructSlice {
     fn pack_to_slice(&self, output: &mut [u8]) -> Result<(), packed_struct::PackingError> {
-        if output.len() != Self::packed_bytes(){
+        if output.len() != Self::packed_bytes_size(None)? {
             return Err(PackingError::BufferTooSmall);
         }
 
         let mut i = 0;
 
-        let n = FractalHeader::packed_bytes();
+        let n = FractalHeader::packed_bytes_size(None)?;
         self.header.pack_to_slice(&mut output[i..(i+n)])?;
         i += n;
 
@@ -51,22 +51,26 @@ impl<TData> PackedStructSlice for FractalAudioMessage<TData> where TData: Packed
         output[i] = self.function.to_primitive();
         i += n;
         
-        let n = TData::packed_bytes();
+        let n = TData::packed_bytes_size(Some(&self.data))?;
         self.data.pack_to_slice(&mut output[i..(i+n)])?;
         i += n;
 
-        let n = FractalFooter::packed_bytes();
+        let n = FractalFooter::packed_bytes_size(None)?;
         self.footer.pack_to_slice(&mut output[i..(i+n)])?;
 
         Ok(())
     }
 
     fn unpack_from_slice(src: &[u8]) -> Result<Self, packed_struct::PackingError> {
-        if src.len() != Self::packed_bytes() { return Err(packed_struct::PackingError::BufferSizeMismatch {actual: src.len(), expected: Self::packed_bytes() }); }
+        //let expected = Self::packed_bytes_size(None)?;
+        //if src.len() != expected { return Err(packed_struct::PackingError::BufferSizeMismatch {actual: src.len(), expected: Self::packed_bytes() }); }
+
+
+        let n_footer = FractalFooter::packed_bytes_size(None)?;
 
         let mut i = 0;
 
-        let n = FractalHeader::packed_bytes();
+        let n = FractalHeader::packed_bytes_size(None)?;
         let header = FractalHeader::unpack_from_slice(&src[i..(i+n)])?;
         i += n;
 
@@ -79,12 +83,10 @@ impl<TData> PackedStructSlice for FractalAudioMessage<TData> where TData: Packed
         };
         i += n;
 
-        let n = TData::packed_bytes();
-        let data = TData::unpack_from_slice(&src[i..(i+n)])?;
-        i += n;
-
-        let n = FractalFooter::packed_bytes();
-        let footer = FractalFooter::unpack_from_slice(&src[i..(i+n)])?;
+        //let n = TData::packed_bytes();
+        let data = TData::unpack_from_slice(&src[i..(src.len()-n_footer)])?;
+                
+        let footer = FractalFooter::unpack_from_slice(&src[(src.len() - n_footer)..])?;
 
         let r = Self {
             header,
@@ -96,8 +98,10 @@ impl<TData> PackedStructSlice for FractalAudioMessage<TData> where TData: Packed
         Ok(r)
     }
 
-    fn packed_bytes() -> usize {
-        FractalHeader::packed_bytes() + 1 + TData::packed_bytes() + FractalFooter::packed_bytes()
+    fn packed_bytes_size(opt_self: Option<&Self>) -> Result<usize, PackingError> {
+        Ok(
+            FractalHeader::packed_bytes_size(None)? + 1 + TData::packed_bytes_size(opt_self.map(|s| &s.data))? + FractalFooter::packed_bytes_size(None)?
+        )
     }
 }
 
@@ -117,60 +121,6 @@ impl<TData> FractalMessageChecksum for FractalAudioMessage<TData> where TData: P
             // todo: change the api?
             vec![]
         }
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq, Default)]
-pub struct DataVoid;
-
-impl PackedStructSlice for DataVoid {
-    fn pack_to_slice(&self, _output: &mut [u8]) -> Result<(), PackingError> {
-        Ok(())
-    }
-
-    fn unpack_from_slice(_src: &[u8]) -> Result<Self, PackingError> {
-        Ok(DataVoid)
-    }
-
-    fn packed_bytes() -> usize {
-        0
-    }
-}
-#[derive(Debug)]
-pub struct Data<A, B>(pub A, pub B);
-impl<A, B> PackedStructSlice for Data<A, B> where A: PackedStructSlice, B: PackedStructSlice {
-    fn pack_to_slice(&self, output: &mut [u8]) -> Result<(), PackingError> {
-        if output.len() != Self::packed_bytes() { return Err(PackingError::BufferSizeMismatch { expected: Self::packed_bytes(), actual: output.len() }); }
-
-        let mut i = 0;
-
-        let n = A::packed_bytes();
-        self.0.pack_to_slice(&mut output[i..(i+n)])?;
-        i += n;
-
-        let n = B::packed_bytes();
-        self.1.pack_to_slice(&mut output[i..(i+n)])?;
-        //i += n;
-
-        Ok(())
-    }
-
-    fn unpack_from_slice(src: &[u8]) -> Result<Self, PackingError> {
-        let mut i = 0;
-
-        let n = A::packed_bytes();
-        let t1 = A::unpack_from_slice(&src[i..(i+n)])?;
-        i += n;
-
-        let n = B::packed_bytes();
-        let t2 = B::unpack_from_slice(&src[i..(i+n)])?;
-        //i += n;
-
-        Ok(Self(t1, t2))
-    }
-
-    fn packed_bytes() -> usize {
-        A::packed_bytes() + B::packed_bytes()
     }
 }
 
@@ -194,8 +144,8 @@ impl<TBytes> PackedStructSlice for DataBytes<TBytes> where TBytes: packed_struct
         })
     }
 
-    fn packed_bytes() -> usize {
-        TBytes::number_of_bytes() as usize
+    fn packed_bytes_size(_opt_self: Option<&Self>) -> Result<usize, PackingError> {
+        Ok(TBytes::number_of_bytes() as usize)
     }
 }
 
