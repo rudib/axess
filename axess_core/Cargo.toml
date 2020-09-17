@@ -21,9 +21,7 @@ serde = "1.0"
 
 serialport = "3.3"
 
-packed_struct = { git = "https://github.com/hashmismatch/packed_struct.rs", branch = "slice_v2" }
-#packed_struct = { path="c:\\code\\rust\\packed_struct.rs\\packed_struct\\" }
-
+packed_struct = "0.4.0"
 
 [target.'cfg(windows)'.dependencies]
 wmi = "0.5"
