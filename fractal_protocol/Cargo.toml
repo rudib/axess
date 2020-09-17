@@ -13,11 +13,11 @@ log = "0.4"
 #packed_struct = "0.3"
 #packed_struct_codegen = "0.3"
 
-#packed_struct = { git = "https://github.com/hashmismatch/packed_struct.rs", branch = "slice_v2" }
-#packed_struct_codegen = { git = "https://github.com/hashmismatch/packed_struct.rs", branch = "slice_v2" }
+packed_struct = { git = "https://github.com/hashmismatch/packed_struct.rs", branch = "slice_v2" }
+packed_struct_codegen = { git = "https://github.com/hashmismatch/packed_struct.rs", branch = "slice_v2" }
 
-packed_struct = { path="c:\\code\\rust\\packed_struct.rs\\packed_struct\\" }
-packed_struct_codegen = { path="c:\\code\\rust\\packed_struct.rs\\packed_struct_codegen\\" }
+#packed_struct = { path="c:\\code\\rust\\packed_struct.rs\\packed_struct\\" }
+#packed_struct_codegen = { path="c:\\code\\rust\\packed_struct.rs\\packed_struct_codegen\\" }
 
 
 quick-error = "2.0"
