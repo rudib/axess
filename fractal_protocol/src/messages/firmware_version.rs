@@ -5,7 +5,6 @@ use crate::FractalProtocolError;
 use crate::{
     functions::FractalFunction,
     model::FractalModel,
-    structs::DataBytes,
     structs::{FractalAudioMessage, FractalU7},
 };
 
@@ -18,14 +17,14 @@ pub struct FirmwareVersion {
     pub minor: u8,
 }
 
-type Raw = FractalAudioMessage<(FractalU7, (FractalU7, DataBytes<Bytes5>))>;
-type RawShort = FractalAudioMessage<(FractalU7, (FractalU7, DataBytes<Bytes2>))>;
+type Raw = FractalAudioMessage<(FractalU7, FractalU7, [u8; 5])>;
+type RawShort = FractalAudioMessage<(FractalU7, FractalU7, [u8; 2])>;
 
 impl TryFrom<Raw> for FirmwareVersion {
     type Error = FractalProtocolError;
 
     fn try_from(value: Raw) -> Result<Self, Self::Error> {
-        let (major, minor) = (value.data.0, (value.data.1).0);
+        let (major, minor) = (value.data.0, value.data.1);
         Ok(FirmwareVersion {
             major: major.into(),
             minor: minor.into(),
@@ -37,7 +36,7 @@ impl TryFrom<RawShort> for FirmwareVersion {
     type Error = FractalProtocolError;
 
     fn try_from(value: RawShort) -> Result<Self, Self::Error> {
-        let (major, minor) = (value.data.0, (value.data.1).0);
+        let (major, minor) = (value.data.0, value.data.1);
         Ok(FirmwareVersion {
             major: major.into(),
             minor: minor.into(),

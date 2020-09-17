@@ -2,7 +2,7 @@ use broadcaster::BroadcastChannel;
 use connected_device::ConnectedDevice;
 use state::DeviceState;
 use packed_struct::PackedStructSlice;
-use crate::{payload::{PayloadConnection, UiPayload}, FractalResult, FractalResultVoid, utils::filter_first, transport::write_struct};
+use crate::{payload::{PayloadConnection, UiPayload}, FractalResult, FractalResultVoid, utils::filter_first, transport::write_struct, transport::write_struct_dyn};
 use crate::transport::{Transport, midi::{Midi}, serial::TransportSerial, Endpoint};
 use fractal_protocol::{model::{FractalDevice}, buffer::MessagesBuffer, messages::firmware_version::FirmwareVersionHelper, messages::FractalAudioMessages, messages::multipurpose_response::MultipurposeResponseHelper,  messages::preset::PresetHelper, messages::scene::SceneWithNameHelper};
 use std::{time::Duration, thread, pin::Pin};
@@ -341,7 +341,7 @@ impl UiBackend {
         trace!("Detected Fractal Model {:?}", model);
 
         // request the firmware version
-        write_struct(&*connection, &FirmwareVersionHelper::get_request(model))?;
+        write_struct_dyn(&mut *connection, &FirmwareVersionHelper::get_request(model))?;
 
         let firmware = filter_first(&mut midi_messages, |msg| {
             match msg {

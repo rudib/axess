@@ -22,7 +22,9 @@ serde = "1.0"
 #serial = "0.4.0"
 serialport = "3.3"
 
-packed_struct = "0.3"
+
+packed_struct = { path="c:\\code\\rust\\packed_struct.rs\\packed_struct\\" }
+
 
 [target.'cfg(windows)'.dependencies]
 wmi = "0.5"

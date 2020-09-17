@@ -40,10 +40,10 @@ impl ConnectedDevice {
     }
 
     pub async fn update_state(&mut self) -> FractalResult<bool> {
-        let preset = self.send_and_wait_for::<PresetAndName>(&PresetHelper::get_current_preset_info(self.device.model))
+        let preset: PresetAndName = self.send_and_wait_for(&PresetHelper::get_current_preset_info(self.device.model))
                     .await.map_err(|_| FractalCoreError::MissingValue("Preset".into()))?;
 
-        let scene = self.send_and_wait_for::<SceneWithName>(&SceneWithNameHelper::get_current_scene_info(self.device.model))
+        let scene: SceneWithName = self.send_and_wait_for(&SceneWithNameHelper::get_current_scene_info(self.device.model))
                     .await.map_err(|_| FractalCoreError::MissingValue("Scene".into()))?;
         
         let device_state = DeviceState {

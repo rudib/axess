@@ -30,7 +30,12 @@ pub trait TransportConnection {
     fn write(&mut self, buf: &[u8]) -> FractalResultVoid;
 }
 
-pub fn write_struct<P: packed_struct::PackedStructSlice>(connection: &TransportConnection, s: &P) -> FractalResultVoid {
+pub fn write_struct<T: TransportConnection, P: packed_struct::PackedStructSlice>(connection: &mut T, s: &P) -> FractalResultVoid {
+    let msg = s.pack_to_vec()?;
+    connection.write(&msg)
+}
+
+pub fn write_struct_dyn<P: packed_struct::PackedStructSlice>(connection: &mut dyn TransportConnection, s: &P) -> FractalResultVoid {
     let msg = s.pack_to_vec()?;
     connection.write(&msg)
 }

@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use log4rs::{append::{console::ConsoleAppender, file::FileAppender, console::Target}, config::Config, config::Appender, config::Root};
 use fractal_protocol::messages::{preset::PresetHelper, FractalAudioMessages, scene::SceneHelper, preset::PresetAndName, effects::EffectsHelper};
-use axess_core::{FractalCoreError, transport::midi::Midi, backend::UiBackend, transport::Transport};
+use axess_core::{FractalCoreError, transport::midi::Midi, backend::UiBackend, transport::Transport, transport::write_struct, transport::write_struct_dyn};
 use packed_struct::PackedStructSlice;
 use log::{trace, LevelFilter};
 
@@ -82,7 +82,7 @@ fn block_effects() -> Result<(), FractalCoreError> {
         let mut connection = connection.ok_or(FractalCoreError::MissingValue("endpoint".into()))?;
         println!("connected?");
 
-        connection.transport_endpoint.write(&EffectsHelper::get_effects(connection.device.model).pack_to_vec()?)?;
+        write_struct_dyn(&mut *connection.transport_endpoint, &EffectsHelper::get_current_blocks(connection.device.model))?;
 
         tokio::time::delay_for(Duration::from_millis(500)).await;
 
