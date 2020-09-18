@@ -1,5 +1,5 @@
 
-use fractal_protocol::messages::{scene::SceneWithName, preset::PresetAndName, effects::Blocks, effects::Effects};
+use fractal_protocol::{messages::{scene::SceneWithName, preset::PresetAndName, effects::Blocks, effects::Effects}, effect::EffectId};
 
 use crate::transport::{Endpoint};
 use crate::FractalCoreError;
@@ -18,6 +18,7 @@ pub enum UiPayload {
     CurrentBlocks(Blocks),
     RequestEffectStatus,
     EffectStatus(Effects),
+    SetEffectBypass { effect: EffectId, is_bypassed: bool },
 
     /// Internal
     Ping,

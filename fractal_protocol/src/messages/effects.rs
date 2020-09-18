@@ -3,7 +3,7 @@ use std::convert::TryFrom;
 use crate::{
     functions::FractalFunction, model::FractalModel,
     structs::FractalAudioMessage,
-effect::EffectId, structs::PresetBlockStatus};
+effect::EffectId, structs::PresetBlockStatus, structs::FractalU14};
 use crate::FractalProtocolError;
 use super::{parse_sysex_message, MessageHelper};
 use crate::packed_struct::PackingError;
@@ -84,6 +84,13 @@ pub struct EffectStatusHelper;
 impl EffectStatusHelper {
     pub fn get_status_dump(model: FractalModel) -> FractalAudioMessage<()> {
         FractalAudioMessage::new(model, FractalFunction::STATUS_DUMP, ())
+    }
+
+    pub fn set_effect_bypass(model: FractalModel, effect_id: EffectId, is_bypassed: bool) -> FractalAudioMessage<(FractalU14, [u8; 1])> {
+        let effect_id: u8 = effect_id.to_primitive();
+        FractalAudioMessage::new(model, FractalFunction::GET_SET_EFFECT_BYPASS,
+             ((effect_id as u16).into(), if is_bypassed { [1] } else { [0] })
+            )
     }
 }
 

@@ -170,6 +170,11 @@ impl UiBackend {
 
                 self.send(UiPayload::EffectStatus(effects)).await?;
             }
+            UiPayload::SetEffectBypass { effect, is_bypassed } => {
+                let device = self.device.as_mut().ok_or(FractalCoreError::NotConnected)?;
+
+                write_struct_dyn(&mut *device.transport_endpoint, &EffectStatusHelper::set_effect_bypass(device.device.model, effect, is_bypassed))?;
+            }
 
             // not for us
             UiPayload::Presets(_) => {}
@@ -179,6 +184,7 @@ impl UiBackend {
             UiPayload::Drop => {}
             UiPayload::DeviceState(_) => {}
             UiPayload::EffectStatus(_) => {}
+            
         }
 
         Ok(())
