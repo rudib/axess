@@ -4,7 +4,7 @@ use state::DeviceState;
 use packed_struct::PackedStructSlice;
 use crate::{payload::{PayloadConnection, UiPayload}, FractalResult, FractalResultVoid, utils::filter_first, transport::write_struct, transport::write_struct_dyn};
 use crate::transport::{Transport, midi::{Midi}, serial::TransportSerial, Endpoint};
-use fractal_protocol::{model::{FractalDevice}, buffer::MessagesBuffer, messages::firmware_version::FirmwareVersionHelper, messages::FractalAudioMessages, messages::multipurpose_response::MultipurposeResponseHelper,  messages::preset::PresetHelper, messages::scene::SceneWithNameHelper};
+use fractal_protocol::{model::{FractalDevice}, buffer::MessagesBuffer, messages::firmware_version::FirmwareVersionHelper, messages::FractalAudioMessages, messages::multipurpose_response::MultipurposeResponseHelper,  messages::preset::PresetHelper, messages::scene::SceneWithNameHelper, messages::effects::EffectsHelper, messages::effects::Blocks};
 use std::{time::Duration, thread, pin::Pin};
 use log::{error, trace};
 use tokio::runtime::Runtime;
@@ -154,8 +154,22 @@ impl UiBackend {
                 }
 
                 self.send(UiPayload::Scenes(scenes)).await?;
-            }
-            _ => {}
+            },
+            UiPayload::RequestCurrentBlocks => {
+                let device = self.device.as_mut().ok_or(FractalCoreError::NotConnected)?;
+
+                let blocks: Blocks = device.send_and_wait_for(&EffectsHelper::get_current_blocks(device.device.model))
+                                        .await.map_err(|_| FractalCoreError::MissingValue("Blocks".into()))?;
+                self.send(UiPayload::CurrentBlocks(blocks)).await?;
+            },
+
+            // not for us
+            UiPayload::Presets(_) => {}
+            UiPayload::Scenes(_) => {}
+            UiPayload::CurrentBlocks(_) => {}
+            UiPayload::Ping => {}
+            UiPayload::Drop => {}
+            UiPayload::DeviceState(_) => {}
         }
 
         Ok(())

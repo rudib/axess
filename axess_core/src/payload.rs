@@ -1,5 +1,5 @@
 
-use fractal_protocol::messages::{scene::SceneWithName, preset::PresetAndName};
+use fractal_protocol::messages::{scene::SceneWithName, preset::PresetAndName, effects::Blocks};
 
 use crate::transport::{Endpoint};
 use crate::FractalCoreError;
@@ -14,6 +14,8 @@ pub enum UiPayload {
     Presets(Vec<PresetAndName>),
     RequestScenes,
     Scenes(Vec<SceneWithName>),
+    RequestCurrentBlocks,
+    CurrentBlocks(Blocks),
 
     /// Internal
     Ping,

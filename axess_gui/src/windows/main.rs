@@ -145,6 +145,16 @@ pub struct MainWindow {
     scenes_list: nwg::ListView,
 
 
+    #[nwg_layout(parent: tab_blocks)]
+    blocks_grid: nwg::GridLayout,
+
+    #[nwg_control(parent: tab_blocks, text: "Blocks")]
+    #[nwg_layout_item(layout: blocks_grid, row: 0, col: 0)]
+    blocks_label: nwg::Label,
+
+
+
+
     #[nwg_control]
     #[nwg_events( OnNotice: [MainWindow::backend_response] )]
     backend_response_notifier: nwg::Notice,
@@ -245,7 +255,10 @@ impl MainWindow {
                 if let Some(ref state) = *self.device_state.borrow() {
                     self.scenes_list.select_item(state.scene as usize, true);
                 }
-            }
+            },
+            Some(UiPayload::CurrentBlocks(blocks)) => {
+
+            },
             Some(_) => {}
             None => {}
         }
@@ -319,6 +332,8 @@ impl MainWindow {
                 
                 self.send(UiPayload::RequestAllPresets);                
                 self.send(UiPayload::RequestScenes);
+            } else if selected_tab == 2 {
+                self.send(UiPayload::RequestCurrentBlocks);
             }
         }
     }

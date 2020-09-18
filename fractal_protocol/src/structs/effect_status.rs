@@ -1,7 +1,9 @@
+use std::convert::TryInto;
+
 use packed_struct::{types::{Integer, ReservedZero}, PackedStruct};
 use packed_struct::prelude::packed_bits;
 
-use crate::{functions::FractalFunction};
+use crate::{functions::FractalFunction, messages::parse_sysex_message, messages::effects::Blocks};
 
 use super::{FractalU14, FractalHeader, FractalFooter, FractalMessageChecksum, FractalAudioMessage};
 use packed_struct::{PrimitiveEnum, PackedStructSlice};
@@ -42,4 +44,70 @@ fn test_effect_status_dump() {
     println!("{:?}", all_effects);
     
     //assert!(all_effects.valid_checksum());
+}
+
+
+#[test]
+fn test_parse_axe3() {
+    extern crate log4rs;
+    use log4rs::{append::{console::ConsoleAppender, file::FileAppender, console::Target}, config::Config, config::Appender, config::Root};
+    use log::{trace, LevelFilter};
+
+        // init logging
+        {
+            let stdout = ConsoleAppender::builder().target(Target::Stdout).build();
+            let file = FileAppender::builder().build("axess-test.log").unwrap();
+            let config = Config::builder()
+                .appender(Appender::builder().build("stdout", Box::new(stdout)))
+                .appender(Appender::builder().build("file", Box::new(file)))
+                .build(Root::builder()
+                    .appender("stdout")
+                    .appender("file")
+                    .build(LevelFilter::Trace)
+                ).unwrap();
+            log4rs::init_config(config).unwrap();
+        }
+
+    let msg = [
+        0xF0,
+        0x0,
+        0x1,
+        0x74,
+        0x10,
+        0xE,
+        0x1B,
+        0x0,
+        0x0,
+        0x0,
+        0x3F,
+        0x5D,
+        0x4D,
+        0x2E,
+        0x3F,
+        0x0,
+        0x0,
+        0x3F,
+        0x0,
+        0x0,
+        0x3F,
+        0x3E,
+        0x0,
+        0x0,
+        0x0,
+        0x0,
+        0x4D,
+        0x26,
+        0x3F,
+        0x73,
+        0x3E,
+        0x36,
+        0xF7,
+    ];
+    
+    let raw = FractalAudioMessage::<Vec<EffectStatus>>::unpack_from_slice(&msg).unwrap();
+    println!("raw: {:?}", raw);
+
+
+    let parsed: Blocks = parse_sysex_message(&msg).unwrap().try_into().unwrap();
+    println!("blocks: {:?}", parsed);
 }
