@@ -58,7 +58,7 @@ impl MessageHelper for BlocksHelper {
 }
 
 #[derive(Debug, Clone)]
-pub struct Effects(Vec<EffectStatus>);
+pub struct Effects(pub Vec<EffectStatus>);
 
 #[derive(Debug, Clone)]
 pub struct EffectStatus {

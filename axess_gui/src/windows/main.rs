@@ -1,4 +1,5 @@
 use nwd::NwgUi;
+use fractal_protocol::effect::EffectId;
 use native_windows_gui::{TabsContainer, Tab};
 use log::trace;
 
@@ -148,9 +149,14 @@ pub struct MainWindow {
     #[nwg_layout(parent: tab_blocks)]
     blocks_grid: nwg::GridLayout,
 
+    /*
     #[nwg_control(parent: tab_blocks, text: "Blocks")]
     #[nwg_layout_item(layout: blocks_grid, row: 0, col: 0)]
     blocks_label: nwg::Label,
+    */
+    #[nwg_control(parent: tab_blocks)]
+    #[nwg_layout_item(layout: blocks_grid, row: 0, col: 0)]
+    blocks_list: nwg::ComboBox<String>,
 
 
 
@@ -258,6 +264,20 @@ impl MainWindow {
             },
             Some(UiPayload::CurrentBlocks(blocks)) => {
 
+            },
+            Some(UiPayload::EffectStatus(effects)) => {
+                let l: Vec<_> = effects.0.iter()
+                .filter(|x| {
+                    x.effect_id != EffectId::ID_EFFECTS_END && x.effect_id != EffectId::ID_PRESET_FC
+                })
+                .map(|x| {
+                    format!("{:?}", x.effect_id)
+                }).collect();
+                let len = l.len();
+                self.blocks_list.set_collection(l);                
+                if len > 0 {
+                    self.blocks_list.set_selection(Some(0));
+                }
             },
             Some(_) => {}
             None => {}
