@@ -333,7 +333,8 @@ impl MainWindow {
                 self.send(UiPayload::RequestAllPresets);                
                 self.send(UiPayload::RequestScenes);
             } else if selected_tab == 2 {
-                self.send(UiPayload::RequestCurrentBlocks);
+                //self.send(UiPayload::RequestCurrentBlocks);
+                self.send(UiPayload::RequestEffectStatus);
             }
         }
     }
@@ -395,3 +396,4 @@ impl MainWindow {
         self.on_tab_changed();
     }
 }
+
