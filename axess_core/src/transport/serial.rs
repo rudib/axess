@@ -123,9 +123,9 @@ impl Transport for TransportSerial {
             let port = port.try_clone()?;
             let stop = stop.clone();
             std::thread::spawn(move || {
-                let mut buffered_reader = BufReader::new(port);
-                let mut buffer = vec![];
+                let mut buffered_reader = BufReader::new(port);                
                 loop {
+                    let mut buffer = vec![];
                     match buffered_reader.read_until(SYSEX_END, &mut buffer) {
                         Ok(bytes) => {
                             let buffer = &buffer[0..bytes];
