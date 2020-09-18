@@ -7,10 +7,12 @@ extern crate wmi;
 extern crate serialport;
 
 use crate::{FractalResultVoid, FractalCoreError};
-use std::{time::Duration, io::{Read, Write, self}, sync::{Mutex, Arc}};
+use std::{time::Duration, io::{Write, self}, sync::{Mutex, Arc}};
 use super::{TransportConnection, Transport, TransportEndpoint, TransportMessage};
 use crossbeam_channel::{Receiver};
+use io::{BufReader, BufRead};
 use serialport::SerialPort;
+use fractal_protocol::buffer::SYSEX_END;
 use log::{error, trace};
 
 #[derive(Debug, Clone)]
@@ -110,28 +112,25 @@ impl Transport for TransportSerial {
 
     fn connect(&self, endpoint: &super::TransportEndpoint) -> Result<Box<dyn TransportConnection>, FractalCoreError> {
         let mut port = serialport::open(&endpoint.id)?;
-        let timeout = Duration::from_millis(100);
+        let timeout = Duration::from_millis(20);
         port.set_timeout(timeout)?;
 
-        //let (serial_write_tx, serial_write_rx) = crossbeam_channel::unbounded::<TransportMessage>();
         let (serial_read_tx, serial_read_rx) = crossbeam_channel::unbounded();
 
         let stop = Arc::new(Mutex::new(false));
 
-        let read_thread = {
-            let mut port = port.try_clone()?;
-            let mut stop = stop.clone();
+        {
+            let port = port.try_clone()?;
+            let stop = stop.clone();
             std::thread::spawn(move || {
-                let mut buffer = [0; 1];
+                let mut buffered_reader = BufReader::new(port);
+                let mut buffer = vec![];
                 loop {
-                    match port.read(&mut buffer) {
+                    match buffered_reader.read_until(SYSEX_END, &mut buffer) {
                         Ok(bytes) => {
                             let buffer = &buffer[0..bytes];
-                            //trace!("serial read {:x?}", buffer);
                             match serial_read_tx.send(buffer.to_vec()) {
-                                Ok(_) => {
-                                    //trace!("serial read sent");
-                                },
+                                Ok(_) => {},
                                 Err(e) => {
                                     error!("Serial port read sending to channel failure: {:?}", e);
                                 }
@@ -198,21 +197,6 @@ impl Drop for TransportSerialConnection {
 }
 
 
-
-
-
-/*
-#[test]
-fn list_serial_ports() {
-    let ports = detect_serial_ports();
-    println!("ports: {:?}", ports);
-
-    if ports.len() == 1 {
-        port_test(&ports.first().unwrap().port).unwrap();
-    }    
-}
-*/
-
 #[test]
 #[ignore]
 fn serial_test() -> Result<(), FractalCoreError> {
@@ -224,7 +208,6 @@ fn serial_test() -> Result<(), FractalCoreError> {
     connection.write(b"ABC").unwrap();
     let received = connection.get_receiver().recv().unwrap();
     println!("received: {:?}", received);
-
 
     Ok(())
 }
