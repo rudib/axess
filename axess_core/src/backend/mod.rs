@@ -24,7 +24,8 @@ pub struct UiBackend {
     channel: BroadcastChannel<UiPayload>,
     transports: Vec<Box<dyn Transport>>,
     device: Option<ConnectedDevice>,
-    status_poller: Pin<Box<dyn Stream<Item = tokio::time::Instant>>>
+    status_poller: Pin<Box<dyn Stream<Item = tokio::time::Instant>>>,
+    poll_failures: u8
 }
 
 
@@ -49,7 +50,8 @@ impl UiBackend {
                 transports: vec![
                     Box::new(midi),
                     Box::new(serial)
-                ]
+                ],
+                poll_failures: 0
             };
 
             trace!("Backend initialized");
@@ -277,18 +279,28 @@ impl UiBackend {
 
     /// request the basic infos from the device that might have changed
     async fn status_poll(&mut self) -> FractalResultVoid {
+        let max_poll_failures = 5;
+
         let mut updated = false;
 
         if let Some(ref mut connected_device) = self.device {
             match connected_device.update_state().await {
                 Ok(true) => {
                     updated = true;
+                    self.poll_failures = 0;
                 },
-                Ok(false) => {},
+                Ok(false) => {
+                    self.poll_failures = 0;
+                },
                 Err(e) => {
                     // failed to poll the device. disconnect.
-                    error!("Polling failed: {:?}", e);
-                    self.channel.send(&UiPayload::Connection(PayloadConnection::Disconnect)).await?;
+                    self.poll_failures += 1;
+                    error!("Polling failed (attempt {}): {:?}", self.poll_failures, e);
+
+                    if self.poll_failures >= max_poll_failures {
+                        error!("Max poll failures, disconnecting.");
+                        self.channel.send(&UiPayload::Connection(PayloadConnection::Disconnect)).await?;
+                    }                    
                 }
             }
         }
