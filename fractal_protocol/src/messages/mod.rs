@@ -40,6 +40,8 @@ pub fn parse_sysex_message(msg: &[u8]) -> Result<FractalAudioMessages, FractalPr
         decoded: None
     };
 
+    // todo: first do a CRC check!
+
     decoder.try_decode::<PresetAndNameHelper>(msg);
     decoder.try_decode::<PresetHelper>(msg);
     decoder.try_decode::<SceneHelper>(msg);

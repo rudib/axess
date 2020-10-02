@@ -7,7 +7,7 @@ use std::{cell::RefCell};
 
 use axess_core::{payload::{PayloadConnection, UiPayload, DeviceState, PresetAndScene}, payload};
 use super::{common::{FractalWindow, WindowApi}, connect::ConnectWindow};
-use crate::windows::main::main_window_ui::MainWindowUi;
+use crate::{device_state::FrontendDeviceState, windows::main::main_window_ui::MainWindowUi};
 
 const NOT_CONNECTED: &'static str = "Not connected.";
 
@@ -46,13 +46,13 @@ pub struct MainWindow {
     #[nwg_control(text: "&View")]
     menu_view: nwg::Menu,
     #[nwg_control(text: "&Main", parent: menu_view)]
-    #[nwg_events( OnMenuItemSelected: [MainWindow::on_menu_view_main] )]
+    #[nwg_events( OnMenuItemSelected: [MainWindow::set_selected_tab_main(SELF)] )]
     menu_view_main: nwg::MenuItem,
     #[nwg_control(text: "&Presets", parent: menu_view)]
-    #[nwg_events( OnMenuItemSelected: [MainWindow::on_menu_view_presets] )]
+    #[nwg_events( OnMenuItemSelected: [MainWindow::set_selected_tab_presets(SELF)] )]
     menu_view_presets: nwg::MenuItem,
     #[nwg_control(text: "&Blocks", parent: menu_view)]
-    #[nwg_events( OnMenuItemSelected: [MainWindow::on_menu_view_blocks] )]
+    #[nwg_events( OnMenuItemSelected: [MainWindow::set_selected_tab_blocks(SELF)] )]
     menu_view_blocks: nwg::MenuItem,
 
 
@@ -167,7 +167,7 @@ pub struct MainWindow {
 
     pub ui_api: Option<WindowApi>,
 
-    pub device_state: RefCell<Option<PresetAndScene>>,
+    pub device_state: RefCell<FrontendDeviceState>,
     pub is_connected: RefCell<bool>
 }
 
@@ -190,6 +190,32 @@ impl FractalWindow for MainWindow {
 }
 
 impl MainWindow {
+    fn tabs() -> [Tabs; 3] {
+        [
+            Tabs::Main,
+            Tabs::Presets,
+            Tabs::Blocks
+        ]
+    }
+
+    fn get_selected_tab(&self) -> Option<Tabs> {
+        let tab_idx = self.tabs_holder.selected_tab();
+        Self::tabs().get(tab_idx).cloned()
+    }
+
+    fn set_selected_tab(&self, tab: Tabs) {
+        let tabs = Self::tabs();
+        let idx = tabs.iter().position(|x| *x == tab);
+        if let Some(idx) = idx {
+            self.tabs_holder.set_selected_tab(idx);
+            self.on_tab_changed();
+        }
+    }
+
+    fn set_selected_tab_main(&self) { self.set_selected_tab(Tabs::Main) }
+    fn set_selected_tab_presets(&self) { self.set_selected_tab(Tabs::Presets) }
+    fn set_selected_tab_blocks(&self) { self.set_selected_tab(Tabs::Blocks) }
+
     fn main_controls_when_connected(&self, visibility: bool) {
         //self.tabs_holder.set_visible(visibility);
         //self.tab_main.set_visible(visibility);
@@ -237,29 +263,33 @@ impl MainWindow {
                 self.main_scene_number.set_text(&format!("Scene {}", p.scene + 1));
                 self.main_scene_name.set_text(&p.scene_name);
 
-                *self.device_state.borrow_mut() = Some(p.clone());
+                self.device_state.borrow_mut().current_preset_and_scene = Some(p.clone());
             },
             Some(UiPayload::Presets(presets)) => {
                 self.presets_list.clear();
-                for p in presets {
+                for p in &presets {
                     self.presets_list.insert_item(format!("{:0>3} {}", p.number, p.name));
                 }
                 self.presets_list.set_visible(true);
                 self.presets_list.set_focus();
 
-                if let Some(ref state) = *self.device_state.borrow() {
-                    self.presets_list.select_item(state.preset as usize, true);
+                let mut state = self.device_state.borrow_mut();
+                state.presets = presets;
+                if let Some(ref current_preset) = state.current_preset_and_scene {                
+                    self.presets_list.select_item(current_preset.preset as usize, true);
                 }
             },
             Some(UiPayload::Scenes(scenes)) => {
                 self.scenes_list.clear();
-                for s in scenes {
+                for s in &scenes {
                     self.scenes_list.insert_item(format!("Scene {} {}", s.number, s.name));
                 }
                 self.scenes_list.set_visible(true);
 
-                if let Some(ref state) = *self.device_state.borrow() {
-                    self.scenes_list.select_item(state.scene as usize, true);
+                let mut state = self.device_state.borrow_mut();
+                state.current_presets_scenes = scenes;
+                if let Some(ref current_preset) = state.current_preset_and_scene {
+                    self.scenes_list.select_item(current_preset.scene as usize, true);
                 }
             },
             Some(UiPayload::CurrentBlocks(blocks)) => {
@@ -285,9 +315,10 @@ impl MainWindow {
     }
 
     fn preset_delta(&self, delta: i16) {
-        if let Some(ref device_state) = *self.device_state.borrow() {
+        let device_state = self.device_state.borrow();
+        if let Some(ref current_preset) = device_state.current_preset_and_scene {
 
-            let mut p = device_state.preset as i16 + delta;
+            let mut p = current_preset.preset as i16 + delta;
             if p < 0 { p = 511; }
             if p > 511 { p = 0; }
 
@@ -304,9 +335,10 @@ impl MainWindow {
     }
 
     fn scene_delta(&self, delta: i8) {
-        if let Some(ref device_state) = *self.device_state.borrow() {
+        let device_state = self.device_state.borrow();
+        if let Some(ref current_preset) = device_state.current_preset_and_scene {
 
-            let mut s = device_state.scene as i8 + delta;
+            let mut s = current_preset.scene as i8 + delta;
             if s < 0 { s = 7; }
             if s > 7 { s = 0; }
 
@@ -325,7 +357,7 @@ impl MainWindow {
     fn on_key_press(&self, data: &nwg::EventData) {
         if *self.is_connected.borrow() == false { return; }
 
-        if self.tabs_holder.selected_tab() == 0 {
+        if self.get_selected_tab() == Some(Tabs::Main) {
             if let nwg::EventData::OnKey(key) = data {
                 if *key == 'W' as u32 {
                     self.previous_scene();
@@ -341,9 +373,8 @@ impl MainWindow {
     }
 
     fn on_tab_changed(&self) {
-        let selected_tab = self.tabs_holder.selected_tab();
-        if selected_tab != usize::max_value() {
-            if selected_tab == 1 {                
+        match self.get_selected_tab() {
+            Some(Tabs::Presets) => {
                 self.presets_list.set_visible(false);
                 self.scenes_list.set_visible(false);
                 
@@ -352,10 +383,11 @@ impl MainWindow {
                 
                 self.send(UiPayload::RequestAllPresets);                
                 self.send(UiPayload::RequestScenes);
-            } else if selected_tab == 2 {
-                //self.send(UiPayload::RequestCurrentBlocks);
-                self.send(UiPayload::RequestEffectStatus);
             }
+            Some(Tabs::Blocks) => {
+                self.send(UiPayload::RequestEffectStatus);
+            },
+            _ => ()
         }
     }
 
@@ -399,21 +431,6 @@ impl MainWindow {
                 self.send(UiPayload::DeviceState(payload::DeviceState::SetScene {scene: idx as u8 }));
             }
         }
-    }
-
-    fn on_menu_view_main(&self) {
-        self.tabs_holder.set_selected_tab(0);
-        self.on_tab_changed();
-    }
-
-    fn on_menu_view_presets(&self) {
-        self.tabs_holder.set_selected_tab(1);
-        self.on_tab_changed();
-    }
-
-    fn on_menu_view_blocks(&self) {
-        self.tabs_holder.set_selected_tab(2);
-        self.on_tab_changed();
     }
 }
 
