@@ -4,7 +4,7 @@ use state::DeviceState;
 use packed_struct::PackedStructSlice;
 use crate::{payload::{PayloadConnection, UiPayload}, FractalResult, FractalResultVoid, utils::filter_first, transport::write_struct, transport::write_struct_dyn};
 use crate::transport::{Transport, midi::{Midi}, serial::TransportSerial, Endpoint};
-use fractal_protocol::{model::{FractalDevice}, buffer::MessagesBuffer, messages::firmware_version::FirmwareVersionHelper, messages::FractalAudioMessages, messages::multipurpose_response::MultipurposeResponseHelper,  messages::preset::PresetHelper, messages::scene::SceneWithNameHelper, messages::effects::Blocks, messages::effects::BlocksHelper, messages::effects::EffectStatusHelper, messages::effects::Effects};
+use fractal_protocol::{buffer::MessagesBuffer, messages::FractalAudioMessages, messages::effects::Blocks, messages::effects::BlocksHelper, messages::effects::EffectBypassHelper, messages::effects::EffectBypassStatus, messages::effects::EffectStatusHelper, messages::effects::Effects, messages::firmware_version::FirmwareVersionHelper, messages::multipurpose_response::MultipurposeResponseHelper, messages::preset::PresetHelper, messages::scene::SceneWithNameHelper, model::{FractalDevice}};
 use std::{time::Duration, thread, pin::Pin};
 use log::{error, trace};
 use tokio::runtime::Runtime;
@@ -173,7 +173,10 @@ impl UiBackend {
             UiPayload::SetEffectBypass { effect, is_bypassed } => {
                 let device = self.device.as_mut().ok_or(FractalCoreError::NotConnected)?;
 
-                write_struct_dyn(&mut *device.transport_endpoint, &EffectStatusHelper::set_effect_bypass(device.device.model, effect, is_bypassed))?;
+                //write_struct_dyn(&mut *device.transport_endpoint, &EffectBypassHelper::set_effect_bypass(device.device.model, effect, is_bypassed))?;
+                let effect_status: EffectBypassStatus = device.send_and_wait_for(&EffectBypassHelper::set_effect_bypass(device.device.model, effect, is_bypassed))
+                                                              .await.map_err(|_| FractalCoreError::MissingValue("Effect Bypass Status".into()))?;
+                self.send(UiPayload::EffectBypassStatus(effect_status)).await?;
             }
 
             // not for us
@@ -184,6 +187,7 @@ impl UiBackend {
             UiPayload::Drop => {}
             UiPayload::DeviceState(_) => {}
             UiPayload::EffectStatus(_) => {}
+            UiPayload::EffectBypassStatus(_) => {}
             
         }
 
@@ -340,9 +344,9 @@ impl UiBackend {
                 let mut messages_buffer = MessagesBuffer::new();
                 loop {
                     if let Ok(msg) = receiver.recv() {
-                        if let Some(msg) = messages_buffer.parse(&msg) {
-                            trace!("Received SYSEX message: {:?}", msg);
-                            block_on(midi_messages.send(&msg)).unwrap();
+                        for parsed_msg in messages_buffer.parse(&msg) {
+                            trace!("Received SYSEX message: {:?}", parsed_msg);
+                            block_on(midi_messages.send(&parsed_msg)).unwrap();
                         }
                     } else {
                         break;

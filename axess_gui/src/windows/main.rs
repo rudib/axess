@@ -1,5 +1,5 @@
 use nwd::NwgUi;
-use fractal_protocol::effect::EffectId;
+use fractal_protocol::{effect::EffectId, messages::effects::EffectStatus};
 use native_windows_gui::{TabsContainer, Tab};
 use log::trace;
 
@@ -156,7 +156,22 @@ pub struct MainWindow {
     */
     #[nwg_control(parent: tab_blocks)]
     #[nwg_layout_item(layout: blocks_grid, row: 0, col: 0)]
+    #[nwg_events( OnComboxBoxSelection: [MainWindow::blocks_on_select] )]
     blocks_list: nwg::ComboBox<String>,
+
+
+    #[nwg_control(parent: tab_blocks)]
+    #[nwg_layout_item(layout: blocks_grid, row: 1, col: 0)]
+    blocks_name: nwg::Label,
+
+    #[nwg_control(parent: tab_blocks)]
+    #[nwg_layout_item(layout: blocks_grid, row: 2, col: 0)]
+    #[nwg_events(OnButtonClick: [MainWindow::effect_bypass_toggle])]
+    blocks_bypass_toggle: nwg::Button,
+
+    #[nwg_control(parent: tab_blocks)]
+    #[nwg_layout_item(layout: blocks_grid, row: 3, col: 0)]
+    blocks_channel: nwg::Label,
 
 
 
@@ -297,18 +312,43 @@ impl MainWindow {
             },
             Some(UiPayload::EffectStatus(effects)) => {
                 let l: Vec<_> = effects.0.iter()
-                .filter(|x| {
-                    x.effect_id != EffectId::ID_EFFECTS_END && x.effect_id != EffectId::ID_PRESET_FC
-                })
-                .map(|x| {
-                    format!("{:?}", x.effect_id)
-                }).collect();
+                    .filter(|x| {
+                        x.effect_id != EffectId::ID_EFFECTS_END && x.effect_id != EffectId::ID_PRESET_FC
+                    })
+                    .map(|x| {
+                        format!("{:?}", x.effect_id)
+                    })
+                    .collect();
                 let len = l.len();
+                
+                {
+                    let mut state = self.device_state.borrow_mut();
+                    state.current_effects = Some(effects);
+                }
+                
+                let was_empty = self.blocks_list.collection().is_empty();
                 self.blocks_list.set_collection(l);                
-                if len > 0 {
+                if was_empty && len > 0 {
                     self.blocks_list.set_selection(Some(0));
                 }
+                self.blocks_on_select();
             },
+
+            Some(UiPayload::EffectBypassStatus(effect_bypass_status)) => {                
+                {
+                    let mut state = self.device_state.borrow_mut();
+                    
+                    if let Some(ref mut effects) = state.current_effects {
+                        for mut ef in &mut effects.0 {
+                            if ef.effect_id == effect_bypass_status.effect_id {
+                                ef.is_bypassed = effect_bypass_status.is_bypassed;
+                            }
+                        }
+                    }
+                }
+
+                self.blocks_on_select();
+            }
             Some(_) => {}
             None => {}
         }
@@ -385,6 +425,7 @@ impl MainWindow {
                 self.send(UiPayload::RequestScenes);
             }
             Some(Tabs::Blocks) => {
+                self.blocks_list.collection_mut().clear();
                 self.send(UiPayload::RequestEffectStatus);
             },
             _ => ()
@@ -430,6 +471,39 @@ impl MainWindow {
                 trace!("Selecting scene {}", idx);
                 self.send(UiPayload::DeviceState(payload::DeviceState::SetScene {scene: idx as u8 }));
             }
+        }
+    }
+
+    fn get_current_selected_effect(&self) -> Option<EffectStatus> {
+        if let Some(idx) = self.blocks_list.selection() {
+            let state = self.device_state.borrow();
+            if let Some(ref effects) = state.current_effects {
+                return effects.0.get(idx).cloned();
+            }
+        }
+
+        None
+    }
+
+    fn effect_bypass_toggle(&self) {
+        if let Some(effect) = self.get_current_selected_effect() {
+            let new_status = !effect.is_bypassed;
+            trace!("Setting effect {:?} to status {}", effect.effect_id, if new_status { "DISABLED" } else { "ENABLED" });
+
+            self.send(UiPayload::SetEffectBypass { effect: effect.effect_id, is_bypassed: new_status });
+        }
+    }
+
+    fn blocks_on_select(&self) {
+        if let Some(effect) = self.get_current_selected_effect() {
+            self.blocks_name.set_text(&format!("{:?}", effect.effect_id));
+            self.blocks_channel.set_text(&format!("Channel {:?}", effect.channel));
+            let button_label = if effect.is_bypassed {
+                "DISABLED"
+            } else {
+                "ENABLED"
+            };
+            self.blocks_bypass_toggle.set_text(button_label);
         }
     }
 }

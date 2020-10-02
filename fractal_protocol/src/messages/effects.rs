@@ -80,17 +80,54 @@ pub enum Channel {
     H = 7
 }
 
-pub struct EffectStatusHelper;
-impl EffectStatusHelper {
-    pub fn get_status_dump(model: FractalModel) -> FractalAudioMessage<()> {
-        FractalAudioMessage::new(model, FractalFunction::STATUS_DUMP, ())
-    }
+#[derive(Debug, Clone)]
+pub struct EffectBypassStatus {
+    pub effect_id: EffectId,
+    pub is_bypassed: bool
+}
 
+pub struct EffectBypassHelper;
+impl EffectBypassHelper {
     pub fn set_effect_bypass(model: FractalModel, effect_id: EffectId, is_bypassed: bool) -> FractalAudioMessage<(FractalU14, [u8; 1])> {
         let effect_id: u8 = effect_id.to_primitive();
         FractalAudioMessage::new(model, FractalFunction::GET_SET_EFFECT_BYPASS,
              ((effect_id as u16).into(), if is_bypassed { [1] } else { [0] })
             )
+    }
+}
+
+impl MessageHelper for EffectBypassHelper {
+    type RawResponse = FractalAudioMessage<(FractalU14, [u8; 1])>;
+    type Response = EffectBypassStatus;
+
+    fn response_function() -> FractalFunction {
+        FractalFunction::GET_SET_EFFECT_BYPASS
+    }
+}
+
+impl TryFrom<FractalAudioMessage<(FractalU14, [u8; 1])>> for EffectBypassStatus {
+    type Error = FractalProtocolError;
+
+    fn try_from(value: FractalAudioMessage<(FractalU14, [u8; 1])>) -> Result<Self, Self::Error> {
+        let effect_id: u16 = value.data.0.into();
+        let effect_id_typed = EffectId::from_primitive(effect_id as u8);
+        let is_bypassed = value.data.1;
+        
+        Ok(EffectBypassStatus {
+            effect_id: effect_id_typed.ok_or(FractalProtocolError::UnknownValue { param: "EffectId".into(), value: format!("{:X?}", effect_id)})?,
+            is_bypassed: if is_bypassed == [1] { true } else { false }
+        })
+    }
+}
+
+
+
+
+
+pub struct EffectStatusHelper;
+impl EffectStatusHelper {
+    pub fn get_status_dump(model: FractalModel) -> FractalAudioMessage<()> {
+        FractalAudioMessage::new(model, FractalFunction::STATUS_DUMP, ())
     }
 }
 

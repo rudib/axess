@@ -5,7 +5,7 @@ pub mod scene;
 pub mod effects;
 
 use std::{convert::TryFrom, fmt::Debug};
-use effects::{Blocks, BlocksHelper, EffectStatusHelper, Effects};
+use effects::{Blocks, BlocksHelper, EffectBypassHelper, EffectBypassStatus, EffectStatusHelper, Effects};
 use log::error;
 use preset::{Preset, PresetHelper, PresetAndName, PresetAndNameHelper};
 use scene::{SceneWithName, SceneHelper, Scene, SceneWithNameHelper};
@@ -32,7 +32,8 @@ pub enum FractalAudioMessages {
     SceneWithName(SceneWithName),
     Scene(Scene),
     Blocks(Blocks),
-    Effects(Effects)
+    Effects(Effects),
+    EffectBypassStatus(EffectBypassStatus)
 }
 
 pub fn parse_sysex_message(msg: &[u8]) -> Result<FractalAudioMessages, FractalProtocolError> {
@@ -51,6 +52,7 @@ pub fn parse_sysex_message(msg: &[u8]) -> Result<FractalAudioMessages, FractalPr
     decoder.try_decode::<MultipurposeResponseHelper>(msg);
     decoder.try_decode::<BlocksHelper>(msg);
     decoder.try_decode::<EffectStatusHelper>(msg);
+    decoder.try_decode::<EffectBypassHelper>(msg);
 
     decoder.decoded.ok_or(FractalProtocolError::UnknownMessage)
 }
