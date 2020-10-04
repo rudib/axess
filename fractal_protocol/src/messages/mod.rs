@@ -10,7 +10,7 @@ use std::{convert::TryFrom, fmt::Debug};
 use effects::{Blocks, BlocksHelper, EffectBypassHelper, EffectBypassStatus, EffectStatusHelper, Effects};
 use log::error;
 use preset::{Preset, PresetHelper, PresetAndName, PresetAndNameHelper};
-use scene::{SceneWithName, SceneHelper, Scene, SceneWithNameHelper};
+use scene::{Scene, SceneHelper, SceneNameRequest, SceneWithName, SceneWithNameHelper, SceneWithNameRequestHelper};
 use firmware_version::{FirmwareVersion, FirmwareVersionHelper, FirmwareVersionShortHelper};
 use multipurpose_response::{MultipurposeResponse, MultipurposeResponseHelper};
 
@@ -33,6 +33,7 @@ pub enum FractalAudioMessages {
     Preset(Preset),
     SceneWithName(SceneWithName),
     Scene(Scene),
+    SceneNameRequest(SceneNameRequest),
     Blocks(Blocks),
     Effects(Effects),
     EffectBypassStatus(EffectBypassStatus)
@@ -49,6 +50,7 @@ pub fn parse_sysex_message(msg: &[u8]) -> Result<FractalAudioMessages, FractalPr
     decoder.try_decode::<PresetHelper>(msg);
     decoder.try_decode::<SceneHelper>(msg);
     decoder.try_decode::<SceneWithNameHelper>(msg);
+    decoder.try_decode::<SceneWithNameRequestHelper>(msg);
     decoder.try_decode::<FirmwareVersionHelper>(msg);
     decoder.try_decode::<FirmwareVersionShortHelper>(msg);
     decoder.try_decode::<MultipurposeResponseHelper>(msg);
