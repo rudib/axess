@@ -4,6 +4,8 @@ pub mod preset;
 pub mod scene;
 pub mod effects;
 
+mod tests;
+
 use std::{convert::TryFrom, fmt::Debug};
 use effects::{Blocks, BlocksHelper, EffectBypassHelper, EffectBypassStatus, EffectStatusHelper, Effects};
 use log::error;

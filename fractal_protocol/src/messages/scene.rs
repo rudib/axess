@@ -78,7 +78,7 @@ impl MessageHelper for SceneHelper {
     type Response = Scene;
 
     fn response_function() -> crate::functions::FractalFunction {
-        FractalFunction::GET_SCENE_NAME
+        FractalFunction::GET_SET_SCENE
     }
 }
 
