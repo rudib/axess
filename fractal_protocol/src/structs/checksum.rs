@@ -17,7 +17,7 @@ pub trait FractalMessageChecksum {
     }
 }
 
-fn calc_checksum(sysex: &[u8]) -> u8 {
+pub fn calc_checksum(sysex: &[u8]) -> u8 {
     if sysex.len() < 2 {
         return 0;
     }

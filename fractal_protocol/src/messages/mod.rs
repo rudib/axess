@@ -14,12 +14,12 @@ use scene::{Scene, SceneHelper, SceneNameRequest, SceneWithName, SceneWithNameHe
 use firmware_version::{FirmwareVersion, FirmwareVersionHelper, FirmwareVersionShortHelper};
 use multipurpose_response::{MultipurposeResponse, MultipurposeResponseHelper};
 
-use crate::{functions::FractalFunction, structs::FractalAudioMessageFunction};
+use crate::{functions::FractalFunction, structs::FractalAudioMessageFunction, structs::FractalAudioMessageUnpacker};
 use crate::FractalProtocolError;
 use crate::packed_struct::PackedStructSlice;
 
 pub trait MessageHelper where <Self::Response as TryFrom<Self::RawResponse>>::Error : Debug {
-    type RawResponse : packed_struct::PackedStructSlice + FractalAudioMessageFunction;
+    type RawResponse : packed_struct::PackedStructSlice + FractalAudioMessageFunction + FractalAudioMessageUnpacker;
     type Response : TryFrom<Self::RawResponse> + Into<FractalAudioMessages>;
 
     fn response_function() -> FractalFunction;
@@ -44,8 +44,6 @@ pub fn parse_sysex_message(msg: &[u8]) -> Result<FractalAudioMessages, FractalPr
         decoded: None
     };
 
-    // todo: first do a CRC check!
-
     decoder.try_decode::<PresetAndNameHelper>(msg);
     decoder.try_decode::<PresetHelper>(msg);
     decoder.try_decode::<SceneHelper>(msg);
@@ -69,7 +67,7 @@ impl SysexDecoder {
     fn try_decode<T: MessageHelper>(&mut self, msg: &[u8]) where <<T as MessageHelper>::Response as std::convert::TryFrom<<T as MessageHelper>::RawResponse>>::Error: std::fmt::Debug {
         if self.decoded.is_some() { return; }
 
-        match T::RawResponse::unpack_from_slice(&msg) {
+        match T::RawResponse::unpack_from_slice_with_crc_check(&msg) {
             Ok(raw) => {
                 if raw.get_function() == T::response_function() {
                     match T::Response::try_from(raw) {

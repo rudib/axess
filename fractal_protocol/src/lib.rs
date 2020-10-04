@@ -20,9 +20,10 @@ extern crate packed_struct_codegen;
 quick_error! {
     #[derive(Debug, Clone)]
     pub enum FractalProtocolError {
-        CrcMismatch {}
+        CrcMismatch { message: u8, calculated: u8 }
         UnknownMessage {}
         MessageConversionError {}
         UnknownValue {param: String, value: String}
+        PackingError(err: packed_struct::PackingError) { from() }
     }
 }

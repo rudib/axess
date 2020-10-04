@@ -1,7 +1,7 @@
 use packed_struct::{PackedStructSlice, PackingError, PrimitiveEnum};
 
-use crate::{functions::FractalFunction, model::FractalModel};
-use super::{FractalHeader, FractalFooter, FractalMessageChecksum};
+use crate::{functions::FractalFunction, model::FractalModel, FractalProtocolError};
+use super::{FractalFooter, FractalHeader, FractalMessageChecksum, calc_checksum};
 #[derive(Debug, Clone, PartialEq)]
 pub struct FractalAudioMessage<TData> where TData: PackedStructSlice + Clone {
     pub header: FractalHeader,
@@ -22,6 +22,10 @@ impl<TData> FractalAudioMessageFunction for FractalAudioMessage<TData> where TDa
     }
 }
 
+pub trait FractalAudioMessageUnpacker where Self: Sized {
+    fn unpack_from_slice_with_crc_check(src: &[u8]) -> Result<Self, FractalProtocolError>;
+}
+
 impl<TData> FractalAudioMessage<TData> where TData: PackedStructSlice + Clone {
     pub fn new(model: FractalModel, func: FractalFunction, data: TData) -> Self {
         let mut msg = Self {
@@ -36,6 +40,24 @@ impl<TData> FractalAudioMessage<TData> where TData: PackedStructSlice + Clone {
 
     pub fn pack(&self) -> Result<Vec<u8>, PackingError> {
         self.pack_to_vec()
+    }
+}
+
+impl<TData> FractalAudioMessageUnpacker for  FractalAudioMessage<TData> where TData: PackedStructSlice + Clone {
+    fn unpack_from_slice_with_crc_check(src: &[u8]) -> Result<Self, FractalProtocolError> {
+        let unpacked = Self::unpack_from_slice(src)?;
+
+        // TODO: check the headers
+
+        // check the CRC
+        let crc_payload = &src[..src.len() - 2];
+        let crc_calculated = calc_checksum(crc_payload);
+        let crc_received = unpacked.footer.checksum;
+        if crc_calculated != crc_received {
+            return Err(FractalProtocolError::CrcMismatch { calculated: crc_calculated, message: crc_received });
+        }
+
+        Ok(unpacked)
     }
 }
 
