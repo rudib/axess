@@ -13,7 +13,7 @@ use crossbeam_channel::{Receiver};
 use io::{BufReader, BufRead};
 use serialport::SerialPort;
 use fractal_protocol::buffer::SYSEX_END;
-use log::{error, trace};
+use log::{error, info, trace};
 
 #[derive(Debug, Clone)]
 pub struct DetectedSerialPort {
@@ -112,8 +112,10 @@ impl Transport for TransportSerial {
 
     fn connect(&self, endpoint: &super::TransportEndpoint) -> Result<Box<dyn TransportConnection>, FractalCoreError> {
         let mut port = serialport::open(&endpoint.id)?;
-        let timeout = Duration::from_millis(20);
+        let timeout = Duration::from_millis(1);
         port.set_timeout(timeout)?;
+        
+        info!("Connected to port {} with settings {:?} and timeout {} ms", &endpoint.id, port.settings(), timeout.as_millis());
 
         let (serial_read_tx, serial_read_rx) = crossbeam_channel::unbounded();
 
