@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 extern crate fractal_protocol;
 extern crate broadcaster;
 
@@ -10,6 +12,7 @@ use log::{LevelFilter, info, trace};
 use axess_core::{FractalCoreError, backend::UiBackend};
 
 mod windows;
+mod device_state;
 
 fn main() -> Result<(), FractalCoreError> {
     // init logging

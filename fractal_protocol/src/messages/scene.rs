@@ -4,7 +4,7 @@ use super::MessageHelper;
 use crate::{FractalProtocolError, model::FractalModel};
 use crate::{
     functions::FractalFunction,
-    structs::{Data, FractalAudioMessage, FractalString32, FractalU7},
+    structs::{FractalAudioMessage, FractalString32, FractalU7},
 };
 #[derive(Debug, Clone)]
 pub struct SceneWithName {
@@ -17,11 +17,11 @@ pub struct Scene {
     pub number: u8
 }
 
-impl TryFrom<FractalAudioMessage<Data<FractalU7, FractalString32>>> for SceneWithName {
+impl TryFrom<FractalAudioMessage<(FractalU7, FractalString32)>> for SceneWithName {
     type Error = FractalProtocolError;
 
     fn try_from(
-        value: FractalAudioMessage<Data<FractalU7, FractalString32>>,
+        value: FractalAudioMessage<(FractalU7, FractalString32)>,
     ) -> Result<Self, Self::Error> {
         Ok(SceneWithName {
             number: value.data.0.into(),
@@ -46,8 +46,11 @@ impl TryFrom<FractalAudioMessage<FractalU7>> for Scene {
     }
 }
 
+
 pub struct SceneHelper;
 pub struct SceneWithNameHelper;
+
+pub struct SceneWithNameRequestHelper;
 
 impl SceneWithNameHelper {
     pub fn get_current_scene_info(model: FractalModel) -> FractalAudioMessage<FractalU7> {
@@ -64,8 +67,34 @@ impl SceneWithNameHelper {
 }
 
 impl MessageHelper for SceneWithNameHelper {
-    type RawResponse = FractalAudioMessage<Data<FractalU7, FractalString32>>;
+    type RawResponse = FractalAudioMessage<(FractalU7, FractalString32)>;
     type Response = SceneWithName;
+
+    fn response_function() -> crate::functions::FractalFunction {
+        FractalFunction::GET_SCENE_NAME
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct SceneNameRequest {
+    pub number: u8
+}
+
+impl TryFrom<FractalAudioMessage<FractalU7>> for SceneNameRequest {
+    type Error = FractalProtocolError;
+
+    fn try_from(
+        value: FractalAudioMessage<FractalU7>,
+    ) -> Result<Self, Self::Error> {
+        Ok(SceneNameRequest {
+            number: value.data.into()
+        })
+    }
+}
+
+impl MessageHelper for SceneWithNameRequestHelper {
+    type RawResponse = FractalAudioMessage<FractalU7>;
+    type Response = SceneNameRequest;
 
     fn response_function() -> crate::functions::FractalFunction {
         FractalFunction::GET_SCENE_NAME
@@ -78,7 +107,7 @@ impl MessageHelper for SceneHelper {
     type Response = Scene;
 
     fn response_function() -> crate::functions::FractalFunction {
-        FractalFunction::GET_SCENE_NAME
+        FractalFunction::GET_SET_SCENE
     }
 }
 

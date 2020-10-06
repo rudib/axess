@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 extern crate broadcaster;
 extern crate fractal_protocol;
 

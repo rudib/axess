@@ -1,6 +1,6 @@
 use std::convert::TryFrom;
 
-use crate::{structs::{FractalAudioMessage, Data, FractalU7}, functions::FractalFunction, model::FractalModel, structs::DataVoid};
+use crate::{structs::{FractalAudioMessage, FractalU7}, functions::FractalFunction, model::FractalModel};
 use crate::FractalProtocolError;
 use super::MessageHelper;
 
@@ -11,10 +11,10 @@ pub struct MultipurposeResponse {
     pub response_code: u8
 }
 
-impl TryFrom<FractalAudioMessage<Data<FractalU7, FractalU7>>> for MultipurposeResponse {
+impl TryFrom<FractalAudioMessage<(FractalU7, FractalU7)>> for MultipurposeResponse {
     type Error = FractalProtocolError;
 
-    fn try_from(value: FractalAudioMessage<Data<FractalU7, FractalU7>>) -> Result<Self, Self::Error> {
+    fn try_from(value: FractalAudioMessage<(FractalU7, FractalU7)>) -> Result<Self, Self::Error> {
         Ok(MultipurposeResponse {
             model: value.header.model,
             function_id: value.data.0.into(),
@@ -30,13 +30,13 @@ impl MultipurposeResponseHelper {
         vec![0xF0, 0x0, 0x1, 0x74, 0x7F, 0x0, 0x7A, 0xF7]
     }
 
-    pub fn disconnect_from_controller(model: FractalModel) -> FractalAudioMessage<DataVoid> {
-        FractalAudioMessage::new(model, FractalFunction::DISCONNECT_FROM_CONTROLLER, DataVoid)
+    pub fn disconnect_from_controller(model: FractalModel) -> FractalAudioMessage<()> {
+        FractalAudioMessage::new(model, FractalFunction::DISCONNECT_FROM_CONTROLLER, ())
     }
 }
 
 impl MessageHelper for MultipurposeResponseHelper {
-    type RawResponse = FractalAudioMessage<Data<FractalU7, FractalU7>>;
+    type RawResponse = FractalAudioMessage<(FractalU7, FractalU7)>;
     type Response = MultipurposeResponse;
 
     fn response_function() -> FractalFunction {

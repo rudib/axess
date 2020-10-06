@@ -10,9 +10,14 @@ edition = "2018"
 
 [dependencies]
 log = "0.4"
-packed_struct = "0.3"
-packed_struct_codegen = "0.3"
+
+packed_struct = "0.4"
+packed_struct_codegen = "0.4"
+
 quick-error = "2.0"
 
 
 derive_more = "0.99.10"
+
+[dev-dependencies]
+log4rs="*"

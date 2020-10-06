@@ -19,13 +19,13 @@ midir = "0.6"
 quick-error = "2.0"
 serde = "1.0"
 
-#serial = "0.4.0"
 serialport = "3.3"
 
-packed_struct = "0.3"
+packed_struct = "0.4.0"
 
 [target.'cfg(windows)'.dependencies]
 wmi = "0.5"
 
 [dev-dependencies]
 tokio-test="*"
+log4rs = "0.13"
