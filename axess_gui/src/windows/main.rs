@@ -56,13 +56,14 @@ pub struct MainWindow {
     menu_view_blocks: nwg::MenuItem,
 
 
-    /*
     #[nwg_control(text: "&Help")]
     menu_help: nwg::Menu,
 
+    #[nwg_control(text: "Keyboard shortcuts", parent: menu_help)]
+    menu_help_shortcuts: nwg::MenuItem,
+
     #[nwg_control(text: "About", parent: menu_help)]
     menu_help_about: nwg::MenuItem,
-    */
 
     #[nwg_control(text: NOT_CONNECTED, parent: window)]
     status_bar: nwg::StatusBar,

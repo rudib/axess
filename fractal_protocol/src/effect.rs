@@ -9,7 +9,8 @@ pub enum EffectId {
     ID_INPUT2,
     ID_INPUT3,
     ID_INPUT4,
-    ID_INPUT5, // USB Input
+    /// USB Input
+    ID_INPUT5,
     ID_OUTPUT1,
     ID_OUTPUT2,
     ID_OUTPUT3,
@@ -26,15 +27,15 @@ pub enum EffectId {
     ID_PARAEQ2,
     ID_PARAEQ3,
     ID_PARAEQ4,
-    //ID_DISTORT1,
-    //ID_DISTORT2,
-    //ID_DISTORT3,
-    //ID_DISTORT4,
-    ID_AMP1,
-    ID_AMP2,
-    ID_AMP3,
-    ID_AMP4,
 
+    /// Originally ID_DISTORT1
+    ID_AMP1,
+    /// Originally ID_DISTORT2
+    ID_AMP2,
+    /// Originally ID_DISTORT3
+    ID_AMP3,
+    /// Originally ID_DISTORT4
+    ID_AMP4,
     ID_CAB1,
     ID_CAB2,
     ID_CAB3,
