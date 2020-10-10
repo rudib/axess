@@ -291,7 +291,11 @@ impl MainWindow {
                         x.effect_id != EffectId::ID_EFFECTS_END && x.effect_id != EffectId::ID_PRESET_FC
                     })
                     .map(|x| {
-                        format!("{:?}", x.effect_id)
+                        if let Some(display_name) = x.effect_id.get_display_name() {
+                            display_name.into()
+                        } else {
+                            format!("{:?}", x.effect_id)
+                        }
                     })
                     .collect();
                 let len = l.len();
@@ -445,7 +449,13 @@ impl MainWindow {
 
     fn blocks_on_select(&self) {
         if let Some(effect) = self.get_current_selected_effect() {
-            self.blocks_name.set_text(&format!("{:?}, channel {:?}", effect.effect_id, effect.channel));
+            let effect_id_name = if let Some(display_name) = effect.effect_id.get_display_name() {
+                display_name.into()
+            } else {
+                format!("{:?}", effect.effect_id)
+            };
+
+            self.blocks_name.set_text(&format!("{}, channel {:?}", effect_id_name, effect.channel));
             
             let button_label = if effect.is_bypassed {
                 "DISABLED"

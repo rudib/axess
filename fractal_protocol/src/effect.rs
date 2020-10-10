@@ -178,6 +178,42 @@ pub enum EffectId {
     ID_EFFECTS_END
 }
 
+impl EffectId {
+    pub fn get_display_name(&self) -> Option<&'static str> {
+        let s = match self {
+            EffectId::ID_INPUT1 => "Input 1",
+            EffectId::ID_INPUT2 => "Input 2",
+            EffectId::ID_INPUT3 => "Input 3",
+            EffectId::ID_INPUT4 => "Input 4",
+            EffectId::ID_INPUT5 => "Input USB",
+            EffectId::ID_OUTPUT1 => "Output 1",
+            EffectId::ID_OUTPUT2 => "Output 2",
+            EffectId::ID_OUTPUT3 => "Output 3",
+            EffectId::ID_OUTPUT4 => "Output 4",
+            EffectId::ID_AMP1 => "Amp 1",
+            EffectId::ID_AMP2 => "Amp 2",
+            EffectId::ID_AMP3 => "Amp 3",
+            EffectId::ID_AMP4 => "Amp 4",
+            EffectId::ID_CAB1 => "Cab 1",
+            EffectId::ID_CAB2 => "Cab 2",
+            EffectId::ID_CAB3 => "Cab 3",
+            EffectId::ID_CAB4 => "Cab 4",
+            EffectId::ID_FUZZ1 => "Drive 1",
+            EffectId::ID_FUZZ2 => "Drive 2",
+            EffectId::ID_FUZZ3 => "Drive 3",
+            EffectId::ID_FUZZ4 => "Drive 4",
+            EffectId::ID_CHORUS1 => "Chorus 1",
+            EffectId::ID_CHORUS2 => "Chorus 2",
+            EffectId::ID_CHORUS3 => "Chorus 3",
+            EffectId::ID_CHORUS4 => "Chorus 4",
+
+
+            _ => { return None; }
+        };
+        Some(s)
+    }
+}
+
 #[test]
 fn test_effect_ids() {
     use packed_struct::*;
