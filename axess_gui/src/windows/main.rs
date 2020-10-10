@@ -24,10 +24,16 @@ const L_SIZE: Size<D> = Size { width: D::Auto, height: D::Points(40.0) };
 const PRESETS_SIZE: Size<D> = Size { width: D::Auto, height: D::Auto };
 const SCENES_SIZE: Size<D> = Size { width: SCENE_WIDTH, height: D::Auto };
 
-const BLOCKS_SIZE: Size<D> = Size { width: D::Auto, height: D::Points(300.0) };
+const BLOCKS_SIZE: Size<D> = Size { width: D::Auto, height: D::Points(120.0) };
+
+const BLOCKS_ENABLED_BUTTON_SIZE: Size<D> = Size { width: SCENE_WIDTH, height: D::Auto };
 
 const ZERO: D = D::Points(0.0);
 const NULL_PADDING: Rect<D> = Rect { top: ZERO, bottom: ZERO, start: ZERO, end: ZERO };
+
+const MAIN_PADDING: Rect<D> = Rect { top: D::Points(5.0), bottom: D::Points(45.0), start: D::Points(5.0), end: D::Points(5.0) };
+
+const BLOCKS_PADDING: Rect<D> = Rect { top: D::Points(5.0), bottom: D::Points(5.0), start: D::Points(10.0), end: D::Points(10.0) };
 
 #[derive(NwgUi, Default)]
 pub struct MainWindow {
@@ -63,7 +69,7 @@ pub struct MainWindow {
     #[nwg_control(text: "About", parent: menu_help)]
     menu_help_about: nwg::MenuItem,
 
-    #[nwg_layout(parent: window, flex_direction: FlexDirection::Column)]
+    #[nwg_layout(parent: window, flex_direction: FlexDirection::Column, padding: MAIN_PADDING)]
     layout: nwg::FlexboxLayout,
 
 
@@ -136,20 +142,27 @@ pub struct MainWindow {
     #[nwg_layout_item(layout: layout, size: BLOCKS_SIZE)]
     frame_blocks: nwg::Frame,
 
-    #[nwg_layout(parent: frame_blocks, flex_direction: FlexDirection::Column)]
+    #[nwg_layout(parent: frame_blocks, flex_direction: FlexDirection::Column, padding: NULL_PADDING)]
     frame_blocks_layout: nwg::FlexboxLayout,
 
     #[nwg_control(parent: frame_blocks)]
-    #[nwg_layout_item(layout: frame_blocks_layout)]
+    #[nwg_layout_item(layout: frame_blocks_layout, margin: BLOCKS_PADDING)]
     #[nwg_events( OnComboxBoxSelection: [MainWindow::blocks_on_select] )]
     blocks_list: nwg::ComboBox<String>,
 
-    #[nwg_control(parent: frame_blocks)]
+    #[nwg_control(parent: frame_blocks, flags: "VISIBLE")]
     #[nwg_layout_item(layout: frame_blocks_layout)]
+    frame_blocks_details: nwg::Frame,
+
+    #[nwg_layout(parent: frame_blocks_details, flex_direction: FlexDirection::Row)]
+    frame_blocks_details_layout: nwg::FlexboxLayout,
+
+    #[nwg_control(parent: frame_blocks_details)]
+    #[nwg_layout_item(layout: frame_blocks_details_layout, flex_grow: 2.0)]
     blocks_name: nwg::Label,
 
-    #[nwg_control(parent: frame_blocks)]
-    #[nwg_layout_item(layout: frame_blocks_layout)]
+    #[nwg_control(parent: frame_blocks_details)]
+    #[nwg_layout_item(layout: frame_blocks_details_layout, size: BLOCKS_ENABLED_BUTTON_SIZE)]
     #[nwg_events(OnButtonClick: [MainWindow::effect_bypass_toggle])]
     blocks_bypass_toggle: nwg::Button,
 
@@ -259,7 +272,7 @@ impl MainWindow {
             Some(UiPayload::Scenes(scenes)) => {
                 self.scenes_list.clear();
                 for s in &scenes {
-                    self.scenes_list.insert_item(format!("Scene {} {}", s.number, s.name));
+                    self.scenes_list.insert_item(format!("Scene {} {}", s.number + 1, s.name));
                 }
                 self.scenes_list.set_visible(true);
 
