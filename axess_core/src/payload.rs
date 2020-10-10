@@ -67,6 +67,7 @@ pub enum DeviceState {
 pub struct PresetAndScene {
     pub preset: u16,
     pub preset_name: String,
+    /// 0-based
     pub scene: u8,
     pub scene_name: String
 }

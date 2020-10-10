@@ -1,6 +1,6 @@
 use nwd::NwgUi;
 use fractal_protocol::{effect::EffectId, messages::effects::EffectStatus};
-use native_windows_gui::{TabsContainer, Tab};
+use native_windows_gui::{Tab, TabsContainer};
 use log::trace;
 
 use std::{cell::RefCell};
@@ -11,6 +11,23 @@ use crate::{device_state::FrontendDeviceState, windows::main::main_window_ui::Ma
 
 const NOT_CONNECTED: &'static str = "Not connected.";
 
+// Stretch style
+use nwg::stretch::{geometry::{Size, Rect}, style::{Dimension as D, FlexDirection, AlignSelf}};
+
+const SCENE_WIDTH: D = D::Points(300.0);
+
+const STATUS_SIZE: Size<D> = Size { width: D::Auto, height: D::Points(50.0) };
+const STATUS_SCENES_SIZE: Size<D> = Size { width: SCENE_WIDTH, height: D::Auto };
+
+const L_SIZE: Size<D> = Size { width: D::Auto, height: D::Points(40.0) };
+
+const PRESETS_SIZE: Size<D> = Size { width: D::Auto, height: D::Auto };
+const SCENES_SIZE: Size<D> = Size { width: SCENE_WIDTH, height: D::Auto };
+
+const BLOCKS_SIZE: Size<D> = Size { width: D::Auto, height: D::Points(300.0) };
+
+const ZERO: D = D::Points(0.0);
+const NULL_PADDING: Rect<D> = Rect { top: ZERO, bottom: ZERO, start: ZERO, end: ZERO };
 
 #[derive(NwgUi, Default)]
 pub struct MainWindow {
@@ -46,46 +63,96 @@ pub struct MainWindow {
     #[nwg_control(text: "About", parent: menu_help)]
     menu_help_about: nwg::MenuItem,
 
-    #[nwg_layout(parent: window, spacing: 10, margin: [5, 5, 45, 5])]
-    layout: nwg::GridLayout,
+    #[nwg_layout(parent: window, flex_direction: FlexDirection::Column)]
+    layout: nwg::FlexboxLayout,
 
-    #[nwg_control(parent: window, text: "Presets")]
-    #[nwg_layout_item(layout: layout, row: 0, col: 0)]
+
+    #[nwg_control(flags: "VISIBLE")]
+    #[nwg_layout_item(layout: layout, size: STATUS_SIZE)]
+    frame_status: nwg::Frame,
+
+    #[nwg_layout(parent: frame_status, flex_direction: FlexDirection::Row)]
+    frame_status_layout: nwg::FlexboxLayout,
+
+    #[nwg_control(parent: frame_status)]
+    #[nwg_layout_item(layout: frame_status_layout, flex_grow: 2.0)]
+    status_preset: nwg::Label,
+
+    #[nwg_control(parent: frame_status)]
+    #[nwg_layout_item(layout: frame_status_layout, size: STATUS_SCENES_SIZE)]
+    status_scene: nwg::Label,
+
+
+
+    #[nwg_control(flags: "VISIBLE")]
+    #[nwg_layout_item(layout: layout, flex_grow: 2.0)]
+    frame_presets_and_scenes: nwg::Frame,
+
+    #[nwg_layout(parent: frame_presets_and_scenes, flex_direction: FlexDirection::Row)]
+    frame_presets_ands_scenes_layout: nwg::FlexboxLayout,
+
+
+    #[nwg_control(parent: frame_presets_and_scenes, flags: "VISIBLE")]
+    #[nwg_layout_item(layout: frame_presets_ands_scenes_layout, size: PRESETS_SIZE, flex_grow: 2.0)]
+    frame_presets: nwg::Frame,
+
+    #[nwg_layout(parent: frame_presets, flex_direction: FlexDirection::Column, padding: NULL_PADDING)]
+    frame_presets_layout: nwg::FlexboxLayout,
+    
+    
+    #[nwg_control(parent: frame_presets, text: "Presets")]
+    #[nwg_layout_item(layout: frame_presets_layout, size: L_SIZE)]
+    #[nwg_layout_item(layout: frame_presets_layout)]
     presets_label_presets: nwg::Label,
     
-    #[nwg_control(parent: window, list_style: nwg::ListViewStyle::Simple)]
-    #[nwg_layout_item(layout: layout, row: 1, col: 0)]
+    #[nwg_control(parent: frame_presets, list_style: nwg::ListViewStyle::Simple)]
+    #[nwg_layout_item(layout: frame_presets_layout, flex_grow: 2.0)]
     #[nwg_events(OnListViewItemActivated: [MainWindow::presets_list_item_activated(SELF, EVT_DATA)], OnKeyPress: [MainWindow::presets_list_keypress(SELF, EVT_DATA)])]
     presets_list: nwg::ListView,
 
     
-    #[nwg_control(parent: window, text: "Scenes")]
-    #[nwg_layout_item(layout: layout, row: 0, col: 1)]
+    #[nwg_control(parent: frame_presets_and_scenes, flags: "VISIBLE")]
+    #[nwg_layout_item(layout: frame_presets_ands_scenes_layout, size: SCENES_SIZE)]
+    frame_scenes: nwg::Frame,
+
+    #[nwg_layout(parent: frame_scenes, flex_direction: FlexDirection::Column, padding: NULL_PADDING)]
+    frame_scenes_layout: nwg::FlexboxLayout,
+    
+
+    #[nwg_control(parent: frame_scenes, text: "Scenes")]
+    #[nwg_layout_item(layout: frame_scenes_layout, size: L_SIZE)]
+    #[nwg_layout_item(layout: frame_scenes_layout)]
     presets_label_scenes: nwg::Label,
 
 
-    #[nwg_control(parent: window, list_style: nwg::ListViewStyle::Simple)]
-    #[nwg_layout_item(layout: layout, row: 1, col: 1, size: (50, 10))]
+    #[nwg_control(parent: frame_scenes, list_style: nwg::ListViewStyle::Simple)]
+    #[nwg_layout_item(layout: frame_scenes_layout, flex_grow: 2.0)]
     #[nwg_events(OnListViewItemActivated: [MainWindow::scenes_list_item_activated(SELF, EVT_DATA)], OnKeyPress: [MainWindow::scenes_list_keypress(SELF, EVT_DATA)])]
     scenes_list: nwg::ListView,
 
-    #[nwg_control(parent: window)]
-    #[nwg_layout_item(layout: layout, row: 2, col: 0)]
+
+
+    #[nwg_control(flags: "VISIBLE")]
+    #[nwg_layout_item(layout: layout, size: BLOCKS_SIZE)]
+    frame_blocks: nwg::Frame,
+
+    #[nwg_layout(parent: frame_blocks, flex_direction: FlexDirection::Column)]
+    frame_blocks_layout: nwg::FlexboxLayout,
+
+    #[nwg_control(parent: frame_blocks)]
+    #[nwg_layout_item(layout: frame_blocks_layout)]
     #[nwg_events( OnComboxBoxSelection: [MainWindow::blocks_on_select] )]
     blocks_list: nwg::ComboBox<String>,
 
-    #[nwg_control(parent: window)]
-    #[nwg_layout_item(layout: layout, row: 3, col: 0)]
+    #[nwg_control(parent: frame_blocks)]
+    #[nwg_layout_item(layout: frame_blocks_layout)]
     blocks_name: nwg::Label,
 
-    #[nwg_control(parent: window)]
-    #[nwg_layout_item(layout: layout, row: 4, col: 0)]
+    #[nwg_control(parent: frame_blocks)]
+    #[nwg_layout_item(layout: frame_blocks_layout)]
     #[nwg_events(OnButtonClick: [MainWindow::effect_bypass_toggle])]
     blocks_bypass_toggle: nwg::Button,
 
-    #[nwg_control(parent: window)]
-    #[nwg_layout_item(layout: layout, row: 5, col: 0)]
-    blocks_channel: nwg::Label,
     
     #[nwg_control(text: NOT_CONNECTED, parent: window)]
     status_bar: nwg::StatusBar,
@@ -123,9 +190,8 @@ impl FractalWindow for MainWindow {
 
 impl MainWindow {
     fn main_controls_when_connected(&self, visibility: bool) {
-        //self.tabs_holder.set_visible(visibility);
-        //self.tab_main.set_visible(visibility);
-        //self.tab_presets.set_visible(visibility);
+        self.frame_presets_and_scenes.set_visible(visibility);
+        self.frame_blocks.set_visible(visibility);
     }
 
     fn init(&self) {
@@ -168,12 +234,8 @@ impl MainWindow {
                 *self.is_connected.borrow_mut() = false;
             },
             Some(UiPayload::DeviceState(DeviceState::PresetAndScene(ref p))) => {
-                /*
-                self.main_preset_number.set_text(&format!("{:0>3}", p.preset));
-                self.main_preset_name.set_text(&p.preset_name);
-                self.main_scene_number.set_text(&format!("Scene {}", p.scene + 1));
-                self.main_scene_name.set_text(&p.scene_name);
-                */
+                self.status_preset.set_text(&format!("{:0>3} {}", p.preset, p.preset_name));
+                self.status_scene.set_text(&format!("Scene {} {}", p.scene + 1, p.scene_name));
 
                 // todo: select in the items
 
@@ -226,9 +288,9 @@ impl MainWindow {
                     state.current_effects = Some(effects);
                 }
                 
-                let was_empty = self.blocks_list.collection().is_empty();
+                let diff = !self.blocks_list.collection().eq(&l);
                 self.blocks_list.set_collection(l);                
-                if was_empty && len > 0 {
+                if diff && len > 0 {
                     self.blocks_list.set_selection(Some(0));
                 }
                 self.blocks_on_select();
@@ -297,41 +359,17 @@ impl MainWindow {
     fn on_key_press(&self, data: &nwg::EventData) {
         if *self.is_connected.borrow() == false { return; }
 
-        //if self.get_selected_tab() == Some(Tabs::Main) {
-            if let nwg::EventData::OnKey(key) = data {
-                if *key == 'W' as u32 {
-                    self.previous_scene();
-                } else if *key == 'S' as u32 {
-                    self.next_scene();
-                } else if *key == 'D' as u32 {
-                    self.next_preset();
-                } else if *key == 'A' as u32 {
-                    self.previous_preset();
-                }
+        if let nwg::EventData::OnKey(key) = data {
+            if *key == 'W' as u32 {
+                self.previous_scene();
+            } else if *key == 'S' as u32 {
+                self.next_scene();
+            } else if *key == 'D' as u32 {
+                self.next_preset();
+            } else if *key == 'A' as u32 {
+                self.previous_preset();
             }
-        //}
-    }
-
-    fn on_tab_changed(&self) {
-        /*
-        match self.get_selected_tab() {
-            Some(Tabs::Presets) => {
-                self.presets_list.set_visible(false);
-                self.scenes_list.set_visible(false);
-                
-                self.presets_list.clear();                
-                self.scenes_list.clear();
-                
-                self.send(UiPayload::RequestAllPresets);                
-                self.send(UiPayload::RequestScenes);
-            }
-            Some(Tabs::Blocks) => {
-                self.blocks_list.collection_mut().clear();
-                self.send(UiPayload::RequestEffectStatus);
-            },
-            _ => ()
         }
-        */
     }
 
     fn presets_list_item_activated(&self, _data: &nwg::EventData) {
@@ -347,12 +385,10 @@ impl MainWindow {
     }
 
     fn preset_selected(&self) {
-        //if self.tabs_holder.selected_tab() == 1 && self.presets_list.focus() {
-            if let Some(idx) = self.presets_list.selected_item() {
-                trace!("Selecting preset {}", idx);
-                self.send(UiPayload::DeviceState(payload::DeviceState::SetPreset {preset: idx as u16 }));
-            }
-        //}
+        if let Some(idx) = self.presets_list.selected_item() {
+            trace!("Selecting preset {}", idx);
+            self.send(UiPayload::DeviceState(payload::DeviceState::SetPreset {preset: idx as u16 }));
+        }
     }
 
     fn scenes_list_item_activated(&self, _data: &nwg::EventData) {
@@ -368,12 +404,10 @@ impl MainWindow {
     }
 
     fn scene_selected(&self) {
-        //if self.tabs_holder.selected_tab() == 1 && self.scenes_list.focus() {
-            if let Some(idx) = self.scenes_list.selected_item() {
-                trace!("Selecting scene {}", idx);
-                self.send(UiPayload::DeviceState(payload::DeviceState::SetScene {scene: idx as u8 }));
-            }
-        //}
+        if let Some(idx) = self.scenes_list.selected_item() {
+            trace!("Selecting scene {}", idx);
+            self.send(UiPayload::DeviceState(payload::DeviceState::SetScene {scene: idx as u8 }));
+        }
     }
 
     fn get_current_selected_effect(&self) -> Option<EffectStatus> {
@@ -398,8 +432,8 @@ impl MainWindow {
 
     fn blocks_on_select(&self) {
         if let Some(effect) = self.get_current_selected_effect() {
-            self.blocks_name.set_text(&format!("{:?}", effect.effect_id));
-            self.blocks_channel.set_text(&format!("Channel {:?}", effect.channel));
+            self.blocks_name.set_text(&format!("{:?}, channel {:?}", effect.effect_id, effect.channel));
+            
             let button_label = if effect.is_bypassed {
                 "DISABLED"
             } else {
@@ -409,4 +443,5 @@ impl MainWindow {
         }
     }
 }
+
 

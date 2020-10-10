@@ -309,6 +309,7 @@ impl UiBackend {
         if updated {
             self.send_device_state().await?;
             self.send(UiPayload::RequestScenes).await?;
+            self.send(UiPayload::RequestEffectStatus).await?;
         }
 
         Ok(())
@@ -335,6 +336,7 @@ impl UiBackend {
         self.send_device_state().await?;
         self.status_poller = Box::pin(tokio::time::interval(Duration::from_millis(1000)));
         self.send(UiPayload::RequestScenes).await?;
+        self.send(UiPayload::RequestEffectStatus).await?;
         Ok(())
     }
 
