@@ -11,18 +11,13 @@ use crate::{device_state::FrontendDeviceState, windows::main::main_window_ui::Ma
 
 const NOT_CONNECTED: &'static str = "Not connected.";
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-enum Tabs {
-    Main,
-    Presets,
-    Blocks
-}
 
 #[derive(NwgUi, Default)]
 pub struct MainWindow {
     #[nwg_control(title: "Axess Fractal Audio Editor", size: (1000, 563), flags: "MAIN_WINDOW|VISIBLE")]
     #[nwg_events( OnInit: [MainWindow::init], OnWindowClose: [MainWindow::on_exit], OnKeyPress: [MainWindow::on_key_press(SELF, EVT_DATA)] )]
     window: nwg::Window,
+
 
     #[nwg_control(text: "&Device")]
     menu_device: nwg::Menu,
@@ -42,22 +37,6 @@ pub struct MainWindow {
     #[nwg_events( OnMenuItemSelected: [MainWindow::on_exit] )]
     menu_device_exit: nwg::MenuItem,
 
-
-    /*
-    #[nwg_control(text: "&View")]
-    menu_view: nwg::Menu,
-    #[nwg_control(text: "&Main", parent: menu_view)]
-    #[nwg_events( OnMenuItemSelected: [MainWindow::set_selected_tab_main(SELF)] )]
-    menu_view_main: nwg::MenuItem,
-    #[nwg_control(text: "&Presets", parent: menu_view)]
-    #[nwg_events( OnMenuItemSelected: [MainWindow::set_selected_tab_presets(SELF)] )]
-    menu_view_presets: nwg::MenuItem,
-    #[nwg_control(text: "&Blocks", parent: menu_view)]
-    #[nwg_events( OnMenuItemSelected: [MainWindow::set_selected_tab_blocks(SELF)] )]
-    menu_view_blocks: nwg::MenuItem,
-    */
-
-
     #[nwg_control(text: "&Help")]
     menu_help: nwg::Menu,
 
@@ -67,125 +46,56 @@ pub struct MainWindow {
     #[nwg_control(text: "About", parent: menu_help)]
     menu_help_about: nwg::MenuItem,
 
-    #[nwg_control(text: NOT_CONNECTED, parent: window)]
-    status_bar: nwg::StatusBar,
+    #[nwg_layout(parent: window, spacing: 10, margin: [5, 5, 45, 5])]
+    layout: nwg::GridLayout,
 
-    /*
-    #[nwg_control(parent: window)]
-    #[nwg_layout_item(layout: window_layout, row: 0, col: 0)]
-    #[nwg_events(TabsContainerChanged: [MainWindow::on_tab_changed])]
-    tabs_holder: TabsContainer,
-    #[nwg_control(parent: tabs_holder, text: "&Main")]
-    tab_main: Tab,
-    #[nwg_control(parent: tabs_holder, text: "&Presets")]
-    tab_presets: Tab,
-    #[nwg_control(parent: tabs_holder, text: "&Blocks")]
-    tab_blocks: Tab,
-    */
-
-
-    #[nwg_layout(parent: window, spacing: 1)]
-    main_grid: nwg::GridLayout,
-
-    #[nwg_control(parent: window)]
-    #[nwg_layout_item(layout: main_grid, row: 0, col: 0)]
-    main_preset_number: nwg::Label,
-
-    #[nwg_control(parent: window)]
-    #[nwg_layout_item(layout: main_grid, row: 0, col: 1)]
-    main_preset_name: nwg::Label,
-
-    /*
-    #[nwg_control(text: "Previous Preset", parent: tab_main)]
-    #[nwg_layout_item(layout: main_grid, row: 1, col: 0)]
-    #[nwg_events(OnButtonClick: [MainWindow::previous_preset])]
-    main_preset_minus: nwg::Button,
-    
-    #[nwg_control(text: "Next Preset", parent: tab_main)]
-    #[nwg_layout_item(layout: main_grid, row: 1, col: 1)]
-    #[nwg_events(OnButtonClick: [MainWindow::next_preset])]
-    main_preset_plus: nwg::Button,
-    */
-
-    #[nwg_control(parent: window)]
-    #[nwg_layout_item(layout: main_grid, row: 0, col: 2)]
-    main_scene_number: nwg::Label,
-
-    #[nwg_control(parent: window)]
-    #[nwg_layout_item(layout: main_grid, row: 0, col: 3)]
-    main_scene_name: nwg::Label,
-
-    /*
-    #[nwg_control(text: "Previous Scene", parent: tab_main)]
-    #[nwg_layout_item(layout: main_grid, row: 3, col: 0)]
-    #[nwg_events(OnButtonClick: [MainWindow::previous_scene])]
-    main_scene_minus: nwg::Button,
-    
-    #[nwg_control(text: "Next Scene", parent: tab_main)]
-    #[nwg_layout_item(layout: main_grid, row: 3, col: 1)]
-    #[nwg_events(OnButtonClick: [MainWindow::next_scene])]
-    main_scene_plus: nwg::Button,
-    */
-
-    
-    /*
-    #[nwg_layout(parent: tab_presets)]
-    presets_grid: nwg::GridLayout,
-    */
-
-    #[nwg_control(parent: window, text: "Presets (use SPACE to select)")]
-    #[nwg_layout_item(layout: main_grid, row: 1, col: 0)]
+    #[nwg_control(parent: window, text: "Presets")]
+    #[nwg_layout_item(layout: layout, row: 0, col: 0)]
     presets_label_presets: nwg::Label,
-
+    
     #[nwg_control(parent: window, list_style: nwg::ListViewStyle::Simple)]
-    #[nwg_layout_item(layout: main_grid, row: 2, col: 0)]
+    #[nwg_layout_item(layout: layout, row: 1, col: 0)]
     #[nwg_events(OnListViewItemActivated: [MainWindow::presets_list_item_activated(SELF, EVT_DATA)], OnKeyPress: [MainWindow::presets_list_keypress(SELF, EVT_DATA)])]
     presets_list: nwg::ListView,
 
-    #[nwg_control(parent: window, text: "Scenes of the current preset")]
-    #[nwg_layout_item(layout: main_grid, row: 1, col: 1)]
+    
+    #[nwg_control(parent: window, text: "Scenes")]
+    #[nwg_layout_item(layout: layout, row: 0, col: 1)]
     presets_label_scenes: nwg::Label,
 
+
     #[nwg_control(parent: window, list_style: nwg::ListViewStyle::Simple)]
-    #[nwg_layout_item(layout: main_grid, row: 2, col: 1)]
+    #[nwg_layout_item(layout: layout, row: 1, col: 1, size: (50, 10))]
     #[nwg_events(OnListViewItemActivated: [MainWindow::scenes_list_item_activated(SELF, EVT_DATA)], OnKeyPress: [MainWindow::scenes_list_keypress(SELF, EVT_DATA)])]
     scenes_list: nwg::ListView,
 
-
-    /*
-    #[nwg_layout(parent: tab_blocks)]
-    blocks_grid: nwg::GridLayout,
-    */
-
-    /*
-    #[nwg_control(parent: tab_blocks, text: "Blocks")]
-    #[nwg_layout_item(layout: blocks_grid, row: 0, col: 0)]
-    blocks_label: nwg::Label,
-    */
     #[nwg_control(parent: window)]
-    #[nwg_layout_item(layout: main_grid, row: 3, col: 0)]
+    #[nwg_layout_item(layout: layout, row: 2, col: 0)]
     #[nwg_events( OnComboxBoxSelection: [MainWindow::blocks_on_select] )]
     blocks_list: nwg::ComboBox<String>,
 
-
     #[nwg_control(parent: window)]
-    #[nwg_layout_item(layout: main_grid, row: 4, col: 0)]
+    #[nwg_layout_item(layout: layout, row: 3, col: 0)]
     blocks_name: nwg::Label,
 
     #[nwg_control(parent: window)]
-    #[nwg_layout_item(layout: main_grid, row: 5, col: 0)]
+    #[nwg_layout_item(layout: layout, row: 4, col: 0)]
     #[nwg_events(OnButtonClick: [MainWindow::effect_bypass_toggle])]
     blocks_bypass_toggle: nwg::Button,
 
     #[nwg_control(parent: window)]
-    #[nwg_layout_item(layout: main_grid, row: 6, col: 0)]
+    #[nwg_layout_item(layout: layout, row: 5, col: 0)]
     blocks_channel: nwg::Label,
-
+    
+    #[nwg_control(text: NOT_CONNECTED, parent: window)]
+    status_bar: nwg::StatusBar,
 
 
     #[nwg_control]
     #[nwg_events( OnNotice: [MainWindow::backend_response] )]
     backend_response_notifier: nwg::Notice,
+
+
 
     pub ui_api: Option<WindowApi>,
 
@@ -258,12 +168,17 @@ impl MainWindow {
                 *self.is_connected.borrow_mut() = false;
             },
             Some(UiPayload::DeviceState(DeviceState::PresetAndScene(ref p))) => {
+                /*
                 self.main_preset_number.set_text(&format!("{:0>3}", p.preset));
                 self.main_preset_name.set_text(&p.preset_name);
                 self.main_scene_number.set_text(&format!("Scene {}", p.scene + 1));
                 self.main_scene_name.set_text(&p.scene_name);
+                */
 
-                self.device_state.borrow_mut().current_preset_and_scene = Some(p.clone());
+                // todo: select in the items
+
+                let ref mut device_state = self.device_state.borrow_mut();
+                device_state.current_preset_and_scene = Some(p.clone());
             },
             Some(UiPayload::Presets(presets)) => {
                 self.presets_list.clear();

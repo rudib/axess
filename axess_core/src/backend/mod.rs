@@ -293,10 +293,11 @@ impl UiBackend {
                     self.poll_failures = 0;
                 },
                 Err(e) => {
-                    // failed to poll the device. disconnect.
+                    // failed to poll the device.
                     self.poll_failures += 1;
                     error!("Polling failed (attempt {}): {:?}", self.poll_failures, e);
 
+                    // too many polling failures, disconnect.
                     if self.poll_failures >= max_poll_failures {
                         error!("Max poll failures, disconnecting.");
                         self.channel.send(&UiPayload::Connection(PayloadConnection::Disconnect)).await?;
@@ -333,7 +334,8 @@ impl UiBackend {
         self.send(UiPayload::Connection(PayloadConnection::Connected { device: info })).await?;
         self.send_device_state().await?;
         self.status_poller = Box::pin(tokio::time::interval(Duration::from_millis(1000)));
-        Ok(())        
+        self.send(UiPayload::RequestScenes).await?;
+        Ok(())
     }
 
     fn on_disconnect(&mut self) {
