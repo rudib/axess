@@ -8,6 +8,7 @@ use std::{cell::RefCell};
 use axess_core::{payload::{PayloadConnection, UiPayload, DeviceState, PresetAndScene}, payload};
 use super::{common::{FractalWindow, WindowApi}, connect::ConnectWindow};
 use crate::{device_state::FrontendDeviceState, windows::main::main_window_ui::MainWindowUi};
+use super::status_bar::*;
 
 // Stretch style
 use nwg::stretch::{geometry::{Size, Rect}, style::{Dimension as D, FlexDirection, AlignSelf}};
@@ -477,54 +478,4 @@ impl MainWindow {
             self.blocks_bypass_toggle.set_text(button_label);
         }
     }
-}
-
-
-#[derive(Default, Clone)]
-struct AxessStatusBar {
-    messages: Vec<(AxessStatusBarMessageKind, String)>
-}
-
-impl AxessStatusBar {
-    fn op<'a, 'b>(&'a mut self, status_bar: &'b nwg::StatusBar) -> AxessStatusBarOperation<'a, 'b> {
-        AxessStatusBarOperation {
-            s: self,
-            status_bar
-        }
-    }
-}
-
-struct AxessStatusBarOperation<'a, 'b> {
-    s: &'a mut AxessStatusBar,
-    status_bar: &'b nwg::StatusBar
-}
-
-impl<'a, 'b> AxessStatusBarOperation<'a, 'b> {
-    fn push_message(&mut self, message_kind: AxessStatusBarMessageKind, message: String) {
-        let existing = self.s.messages.iter_mut().find(|p| p.0 == message_kind);
-        if let Some(existing) = existing {
-            existing.1 = message;
-        } else {
-            self.s.messages.push((message_kind, message));
-        }
-    }
-
-    fn pop_message(&mut self, message_kind: AxessStatusBarMessageKind) {
-        self.s.messages.retain(|m| m.0 != message_kind);
-    }
-}
-
-impl<'a, 'b> Drop for AxessStatusBarOperation<'a, 'b> {
-    fn drop(&mut self) {
-        if let Some(msg) = self.s.messages.last() {
-            self.status_bar.set_text(0, &msg.1);
-        }
-    }
-}
-
-#[derive(Debug, Copy, Clone, PartialEq)]
-enum AxessStatusBarMessageKind {
-    Default,
-    Connected,
-    Progress
 }
