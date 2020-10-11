@@ -10,7 +10,7 @@ pub struct FractalDevice {
 
 impl Display for FractalDevice {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}, firmware {}.{}", self.model, self.firmware.major, self.firmware.minor)
+        write!(f, "{}, firmware {}.{:0>2}", self.model, self.firmware.major, self.firmware.minor)
     }
 }
 

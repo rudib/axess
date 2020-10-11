@@ -92,8 +92,6 @@ pub struct MidiConnection {
 
 
 impl Transport for Midi {
-    //type TConnection = MidiConnection;
-
     fn id(&self) -> String {
         "midi".into()
     }
