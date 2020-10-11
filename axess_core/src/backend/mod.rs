@@ -131,15 +131,19 @@ impl UiBackend {
                 self.status_poll().await?;
             },
             UiPayload::RequestAllPresets => {
-                //if let Some(ref mut device) = self.device
-                let device = self.device.as_mut().ok_or(FractalCoreError::NotConnected)?;
-                let presets_count = device.device.model.number_of_presets().ok_or(FractalCoreError::MissingValue("Number of presets".into()))?;
+                
+                let presets_count = {
+                    let device = self.device.as_mut().ok_or(FractalCoreError::NotConnected)?;
+                    device.device.model.number_of_presets().ok_or(FractalCoreError::MissingValue("Number of presets".into()))?
+                };
         
                 let mut presets = vec![];
                 for i in 0..presets_count {
+                    let device = self.device.as_mut().ok_or(FractalCoreError::NotConnected)?;
                     let preset = device.send_and_wait_for(&PresetHelper::get_preset_info(device.device.model, i))
                         .await.map_err(|_| FractalCoreError::MissingValue("Preset".into()))?;
                     presets.push(preset);
+                    self.send(UiPayload::ProgressReport { i: i as usize, total: presets_count as usize }).await?;
                 }
 
                 self.send(UiPayload::Presets(presets)).await?;
@@ -189,8 +193,8 @@ impl UiBackend {
             UiPayload::Drop => {}
             UiPayload::DeviceState(_) => {}
             UiPayload::EffectStatus(_) => {}
-            UiPayload::EffectBypassStatus(_) => {}
-            
+            UiPayload::EffectBypassStatus(_) => {}            
+            UiPayload::ProgressReport { .. } => {}
         }
 
         Ok(())

@@ -20,6 +20,10 @@ pub enum UiPayload {
     EffectStatus(Effects),
     SetEffectBypass { effect: EffectId, is_bypassed: bool },
     EffectBypassStatus(EffectBypassStatus),
+    ProgressReport {
+        i: usize,
+        total: usize
+    },
 
     /// Internal
     Ping,

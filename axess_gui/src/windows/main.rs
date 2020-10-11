@@ -9,8 +9,6 @@ use axess_core::{payload::{PayloadConnection, UiPayload, DeviceState, PresetAndS
 use super::{common::{FractalWindow, WindowApi}, connect::ConnectWindow};
 use crate::{device_state::FrontendDeviceState, windows::main::main_window_ui::MainWindowUi};
 
-const NOT_CONNECTED: &'static str = "Not connected.";
-
 // Stretch style
 use nwg::stretch::{geometry::{Size, Rect}, style::{Dimension as D, FlexDirection, AlignSelf}};
 
@@ -167,7 +165,7 @@ pub struct MainWindow {
     blocks_bypass_toggle: nwg::Button,
 
     
-    #[nwg_control(text: NOT_CONNECTED, parent: window)]
+    #[nwg_control(text: "", parent: window)]
     status_bar: nwg::StatusBar,
 
 
@@ -180,7 +178,8 @@ pub struct MainWindow {
     pub ui_api: Option<WindowApi>,
 
     pub device_state: RefCell<FrontendDeviceState>,
-    pub is_connected: RefCell<bool>
+    pub is_connected: RefCell<bool>,
+    axess_status_bar: RefCell<AxessStatusBar>
 }
 
 impl FractalWindow for MainWindow {
@@ -205,11 +204,13 @@ impl MainWindow {
     fn main_controls_when_connected(&self, visibility: bool) {
         self.frame_presets_and_scenes.set_visible(visibility);
         self.frame_blocks.set_visible(visibility);
+        self.frame_status.set_visible(visibility);
     }
 
     fn init(&self) {
         self.main_controls_when_connected(false);
-        self.send(UiPayload::Connection(PayloadConnection::TryToAutoConnect));
+        self.axess_status_bar.borrow_mut().op(&self.status_bar).push_message(AxessStatusBarMessageKind::Default, "Not connected.".into());
+        self.send(UiPayload::Connection(PayloadConnection::TryToAutoConnect));        
     }
 
     fn connect(&self) {
@@ -230,7 +231,7 @@ impl MainWindow {
             },
             Some(UiPayload::Connection(PayloadConnection::Connected { ref device })) => {
                 self.main_controls_when_connected(true);
-                self.status_bar.set_text(0, &format!("Connected to {}.", device));
+                self.axess_status_bar.borrow_mut().op(&self.status_bar).push_message(AxessStatusBarMessageKind::Connected, format!("Connected to {}.", device));
                 self.menu_device_connect.set_enabled(false);
                 self.menu_device_disconnect.set_enabled(true);   
                 *self.is_connected.borrow_mut() = true;
@@ -241,7 +242,7 @@ impl MainWindow {
             },
             Some(UiPayload::Connection(PayloadConnection::Disconnect)) => {
                 self.main_controls_when_connected(false);
-                self.status_bar.set_text(0, NOT_CONNECTED);
+                self.axess_status_bar.borrow_mut().op(&self.status_bar).pop_message(AxessStatusBarMessageKind::Connected);
                 self.menu_device_connect.set_enabled(true);
                 self.menu_device_disconnect.set_enabled(false);
                 *self.is_connected.borrow_mut() = false;
@@ -328,6 +329,17 @@ impl MainWindow {
 
                 self.blocks_on_select();
             }
+
+            Some(UiPayload::ProgressReport { i, total }) => {
+                let mut s = self.axess_status_bar.borrow_mut();
+                let mut op = s.op(&self.status_bar);
+                if i+1 == total {
+                    op.pop_message(AxessStatusBarMessageKind::Progress);
+                } else {
+                    op.push_message(AxessStatusBarMessageKind::Progress, format!("Loading preset name {}/{} ...", (i+1), total));
+                }
+            }
+
             Some(_) => {}
             None => {}
         }
@@ -468,3 +480,51 @@ impl MainWindow {
 }
 
 
+#[derive(Default, Clone)]
+struct AxessStatusBar {
+    messages: Vec<(AxessStatusBarMessageKind, String)>
+}
+
+impl AxessStatusBar {
+    fn op<'a, 'b>(&'a mut self, status_bar: &'b nwg::StatusBar) -> AxessStatusBarOperation<'a, 'b> {
+        AxessStatusBarOperation {
+            s: self,
+            status_bar
+        }
+    }
+}
+
+struct AxessStatusBarOperation<'a, 'b> {
+    s: &'a mut AxessStatusBar,
+    status_bar: &'b nwg::StatusBar
+}
+
+impl<'a, 'b> AxessStatusBarOperation<'a, 'b> {
+    fn push_message(&mut self, message_kind: AxessStatusBarMessageKind, message: String) {
+        let existing = self.s.messages.iter_mut().find(|p| p.0 == message_kind);
+        if let Some(existing) = existing {
+            existing.1 = message;
+        } else {
+            self.s.messages.push((message_kind, message));
+        }
+    }
+
+    fn pop_message(&mut self, message_kind: AxessStatusBarMessageKind) {
+        self.s.messages.retain(|m| m.0 != message_kind);
+    }
+}
+
+impl<'a, 'b> Drop for AxessStatusBarOperation<'a, 'b> {
+    fn drop(&mut self) {
+        if let Some(msg) = self.s.messages.last() {
+            self.status_bar.set_text(0, &msg.1);
+        }
+    }
+}
+
+#[derive(Debug, Copy, Clone, PartialEq)]
+enum AxessStatusBarMessageKind {
+    Default,
+    Connected,
+    Progress
+}
