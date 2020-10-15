@@ -10,8 +10,14 @@ edition = "2018"
 fractal_protocol = { path = "../fractal_protocol/" }
 axess_core = { path = "../axess_core/" }
 
-native-windows-gui = "1.0"
-native-windows-derive = "1.0"
+#native-windows-gui = "1.0"
+#native-windows-derive = "1.0"
+
+#native-windows-gui = { path = "c:\\code\\github\\native-windows-gui\\native-windows-gui\\" }
+#native-windows-derive = { path = "c:\\code\\github\\native-windows-gui\\native-windows-derive\\" }
+
+native-windows-gui = { git = "https://github.com/rudib/native-windows-gui", branch = "pretranslate_callback" }
+native-windows-derive = { git = "https://github.com/rudib/native-windows-gui", branch = "pretranslate_callback" }
 
 broadcaster="1.0"
 futures = "0.3"

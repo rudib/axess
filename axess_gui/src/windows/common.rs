@@ -69,8 +69,25 @@ pub trait FractalWindow {
                 }).unwrap();
             }
 
-            nwg::dispatch_thread_events();
             
+            //nwg::dispatch_thread_events();
+            {
+                //let api = api.clone();
+                nwg::dispatch_thread_events_with_pretranslate(move |m| {
+                    if m.message == 0x0100 {
+                        //trace!("key down: {}", m.wParam);
+                        //api.api.send(UiPayload::KeyboardPress(m.wParam as u32));
+                        //block_on(api.api.borrow().channel.send(&UiPayload::KeyboardPress(m.wParam as u32))).unwrap();
+                    }
+
+                    // todo: need something to clear the receive channel!
+
+                    return true;
+                });
+            }
+            
+            // ..and we are shutting down the window
+
             if let Ok(mut stop) = stop.lock() {
                 *stop = true;
             }

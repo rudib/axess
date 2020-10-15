@@ -387,8 +387,13 @@ impl MainWindow {
     }
 
     fn on_key_press(&self, data: &nwg::EventData) {
-        if *self.is_connected.borrow() == false { return; }
+        //if let nwg::EventData::OnKey(key) = data {
+        //    trace!("key: {:#?}", key);
+        //}
 
+        //if *self.is_connected.borrow() == false { return; }
+
+        /*
         if let nwg::EventData::OnKey(key) = data {
             if *key == 'W' as u32 {
                 self.previous_scene();
@@ -400,6 +405,13 @@ impl MainWindow {
                 self.previous_preset();
             }
         }
+        */
+
+        /*
+        if let nwg::EventData::OnKey(key) = data {
+            trace!("key: {:#?}", key);
+        }
+        */
     }
 
     fn presets_list_item_activated(&self, _data: &nwg::EventData) {
