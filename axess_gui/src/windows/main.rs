@@ -9,6 +9,7 @@ use axess_core::{payload::{PayloadConnection, UiPayload, DeviceState, PresetAndS
 use super::{common::{FractalWindow, WindowApi}, connect::ConnectWindow};
 use crate::{device_state::FrontendDeviceState, windows::main::main_window_ui::MainWindowUi};
 use super::status_bar::*;
+use crate::windows::keyboard::*;
 
 // Stretch style
 use nwg::stretch::{geometry::{Size, Rect}, style::{Dimension as D, FlexDirection, AlignSelf}};
@@ -180,7 +181,8 @@ pub struct MainWindow {
 
     pub device_state: RefCell<FrontendDeviceState>,
     pub is_connected: RefCell<bool>,
-    axess_status_bar: RefCell<AxessStatusBar>
+    axess_status_bar: RefCell<AxessStatusBar>,
+    keyboard_state: RefCell<KeyboardState>
 }
 
 impl FractalWindow for MainWindow {
@@ -198,6 +200,20 @@ impl FractalWindow for MainWindow {
 
     fn get_notice(&self) -> &nwg::Notice {
         &self.backend_response_notifier
+    }
+
+    fn handle_ui_event(&self, event: UiEvent) -> bool {
+        let mut s = self.keyboard_state.borrow_mut();
+        let key = s.handle_event(&event);
+        match key {
+            Some(KeyboardCombination::CtrlKey(k)) => {                
+                //trace!("key: {:?}", key);
+            },
+            Some(_) => {}
+            None => {}
+        }
+
+        true
     }
 }
 
