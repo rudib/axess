@@ -73,25 +73,37 @@ pub enum Keys {
 pub struct KeyboardShortcut {
     pub key: KeyboardShortcutKey,
     pub command_description: Cow<'static, str>,
-    pub command: UiPayload
+    pub command: ShortcutCommand
 }
+
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub enum KeyboardShortcutKey {
     Key(Keys),
     CtrlKey(Keys)
 }
 
+#[derive(Debug, Clone)]
+pub enum ShortcutCommand {
+    UiPayload(UiPayload),
+    SelectPresetOrScene
+}
+
 pub fn get_main_keyboard_shortcuts() -> Vec<KeyboardShortcut> {
     let mut s = vec![
         KeyboardShortcut {
+            key: KeyboardShortcutKey::Key(Keys::Enter),
+            command_description: "Select the preset or scene".into(),
+            command: ShortcutCommand::SelectPresetOrScene
+        },
+        KeyboardShortcut {
             key: KeyboardShortcutKey::CtrlKey(Keys::PageUp),
             command_description: "Preset Up".into(),
-            command: UiPayload::DeviceState(DeviceState::DeltaPreset { delta: 1 })
+            command: ShortcutCommand::UiPayload(UiPayload::DeviceState(DeviceState::DeltaPreset { delta: 1 }))
         },
         KeyboardShortcut {
             key: KeyboardShortcutKey::CtrlKey(Keys::PageDown),
             command_description: "Preset Down".into(),
-            command: UiPayload::DeviceState(DeviceState::DeltaPreset { delta: -1 })
+            command: ShortcutCommand::UiPayload(UiPayload::DeviceState(DeviceState::DeltaPreset { delta: -1 }))
         }
     ];
 
@@ -101,10 +113,10 @@ pub fn get_main_keyboard_shortcuts() -> Vec<KeyboardShortcut> {
             s.push(KeyboardShortcut {
                 key: KeyboardShortcutKey::CtrlKey(key),
                 command_description: format!("Select Scene {}", i + 1).into(),
-                command: UiPayload::DeviceState(DeviceState::SetScene { scene: i })
+                command: ShortcutCommand::UiPayload(UiPayload::DeviceState(DeviceState::SetScene { scene: i }))
             });
         }
     }
-
+    
     s
 }

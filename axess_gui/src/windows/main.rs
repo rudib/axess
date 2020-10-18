@@ -209,23 +209,49 @@ impl FractalWindow for MainWindow {
         let mut s = self.keyboard_state.borrow_mut();
         let key_event = s.handle_event(&ui_event);
 
-        let mut key_shortcut = None;
-        match key_event {
+        let key_shortcut = match key_event {
             Some(KeyboardCombination::CtrlKey(k)) => {                
                 if let Some(key) = Keys::from_primitive(k as u8) {
-                    key_shortcut = Some(KeyboardShortcutKey::CtrlKey(key));
+                    Some(KeyboardShortcutKey::CtrlKey(key))
+                } else {
+                    None
                 }
             },
-            Some(_) => {}
-            None => {}
-        }
+            Some(KeyboardCombination::Key(k)) => {
+                if let Some(key) = Keys::from_primitive(k as u8) {
+                    Some(KeyboardShortcutKey::Key(key))
+                } else {
+                    None
+                }
+            }
+            None => None
+        };
 
         if let Some(key_shortcut) = key_shortcut {
             let shortcuts = self.keyboard_shortcuts.borrow();
             let definition = shortcuts.iter().find(|k| k.key == key_shortcut);
             if let Some(definition) = definition {
                 trace!("Matched keyboard shortcut {:?}", definition);
-                self.send(definition.command.clone());
+                match &definition.command {
+                    ShortcutCommand::UiPayload(p) => {
+                        self.send(p.clone());
+                    }
+                    ShortcutCommand::SelectPresetOrScene => {
+                        if self.presets_list.focus() {                            
+                            let idx = self.presets_list.selected_item();
+                            if let Some(idx) = idx {
+                                self.send(UiPayload::DeviceState(DeviceState::SetPreset { preset: idx as u16}));
+                            }
+                        } else if self.scenes_list.focus() {
+                            let idx = self.scenes_list.selected_item();
+                            if let Some(idx) = idx {
+                                self.send(UiPayload::DeviceState(DeviceState::SetScene { scene: idx as u8 }));
+                            }
+                        }
+                    }
+                }
+                
+                return false;
             }
         }
 
