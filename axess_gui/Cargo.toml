@@ -24,5 +24,8 @@ futures = "0.3"
 log = "0.4"
 log4rs = "0.13"
 
+packed_struct = "0.4"
+packed_struct_codegen = "0.4"
+
 [build-dependencies]
 vergen = "3"

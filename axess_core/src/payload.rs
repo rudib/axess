@@ -60,11 +60,16 @@ pub struct ConnectToMidiPorts {
     pub output_port: String
 }
 */
+
+
+
 #[derive(Debug, Clone)]
 pub enum DeviceState {
     PresetAndScene(PresetAndScene),
     SetPreset { preset: u16 },
-    SetScene { scene: u8 }
+    SetScene { scene: u8 },
+    DeltaPreset { delta: isize },
+    DeltaScene { delta: isize }
 }
 
 #[derive(Default, Debug, Clone)]

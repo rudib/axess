@@ -6,6 +6,9 @@ extern crate broadcaster;
 extern crate native_windows_gui as nwg;
 extern crate native_windows_derive as nwd;
 
+extern crate packed_struct;
+#[macro_use] extern crate packed_struct_codegen;
+
 use windows::{common::{WindowApi, FractalWindow}, main::MainWindow};
 use log4rs::{append::console::{Target, ConsoleAppender}, config::{Appender, Config, Root}, append::file::FileAppender};
 use log::{LevelFilter, info, trace};

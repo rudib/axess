@@ -11,6 +11,8 @@ use crate::{device_state::FrontendDeviceState, windows::main::main_window_ui::Ma
 use super::status_bar::*;
 use crate::windows::keyboard::*;
 
+use packed_struct::PrimitiveEnum;
+
 // Stretch style
 use nwg::stretch::{geometry::{Size, Rect}, style::{Dimension as D, FlexDirection, AlignSelf}};
 
@@ -182,7 +184,8 @@ pub struct MainWindow {
     pub device_state: RefCell<FrontendDeviceState>,
     pub is_connected: RefCell<bool>,
     axess_status_bar: RefCell<AxessStatusBar>,
-    keyboard_state: RefCell<KeyboardState>
+    keyboard_state: RefCell<KeyboardState>,
+    keyboard_shortcuts: RefCell<Vec<KeyboardShortcut>>
 }
 
 impl FractalWindow for MainWindow {
@@ -202,15 +205,28 @@ impl FractalWindow for MainWindow {
         &self.backend_response_notifier
     }
 
-    fn handle_ui_event(&self, event: UiEvent) -> bool {
+    fn handle_ui_event(&self, ui_event: UiEvent) -> bool {
         let mut s = self.keyboard_state.borrow_mut();
-        let key = s.handle_event(&event);
-        match key {
+        let key_event = s.handle_event(&ui_event);
+
+        let mut key_shortcut = None;
+        match key_event {
             Some(KeyboardCombination::CtrlKey(k)) => {                
-                //trace!("key: {:?}", key);
+                if let Some(key) = Keys::from_primitive(k as u8) {
+                    key_shortcut = Some(KeyboardShortcutKey::CtrlKey(key));
+                }
             },
             Some(_) => {}
             None => {}
+        }
+
+        if let Some(key_shortcut) = key_shortcut {
+            let shortcuts = self.keyboard_shortcuts.borrow();
+            let definition = shortcuts.iter().find(|k| k.key == key_shortcut);
+            if let Some(definition) = definition {
+                trace!("Matched keyboard shortcut {:?}", definition);
+                self.send(definition.command.clone());
+            }
         }
 
         true
@@ -225,6 +241,7 @@ impl MainWindow {
     }
 
     fn init(&self) {
+        *self.keyboard_shortcuts.borrow_mut() = get_main_keyboard_shortcuts();
         self.main_controls_when_connected(false);
         self.axess_status_bar.borrow_mut().op(&self.status_bar).push_message(AxessStatusBarMessageKind::Default, "Not connected.".into());
         self.send(UiPayload::Connection(PayloadConnection::TryToAutoConnect));        
