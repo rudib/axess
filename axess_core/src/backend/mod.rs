@@ -129,7 +129,31 @@ impl UiBackend {
 
                 tokio::time::delay_for(Duration::from_millis(10)).await;
                 self.status_poll().await?;
-            },
+            }
+            UiPayload::DeviceState(crate::payload::DeviceState::DeltaPreset { delta }) => {
+                if let Some(ref mut device) = self.device {
+                    let new_preset = {
+                        let p = device.state.preset_number as i16 + delta as i16;
+                        if p < 0 { 511 }
+                        else if p > 511 { 0 }
+                        else { p }
+                    };
+
+                    self.send(UiPayload::DeviceState(crate::payload::DeviceState::SetPreset { preset: new_preset as u16 })).await?;
+                }
+            }
+            UiPayload::DeviceState(crate::payload::DeviceState::DeltaScene { delta }) => {
+                if let Some(ref mut device) = self.device {
+                    let new_scene = {
+                        let s = device.state.scene_number as i8 + delta as i8;
+                        if s < 0 { 7 }
+                        else if s > 7 { 0 }
+                        else { s }
+                    };
+
+                    self.send(UiPayload::DeviceState(crate::payload::DeviceState::SetScene { scene: new_scene as u8 })).await?;
+                }
+            }
             UiPayload::RequestAllPresets => {
                 
                 let presets_count = {

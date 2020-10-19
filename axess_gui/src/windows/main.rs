@@ -40,7 +40,7 @@ const BLOCKS_PADDING: Rect<D> = Rect { top: D::Points(5.0), bottom: D::Points(5.
 #[derive(NwgUi, Default)]
 pub struct MainWindow {
     #[nwg_control(title: "Axess Fractal Audio Editor", size: (1000, 563), flags: "MAIN_WINDOW|VISIBLE")]
-    #[nwg_events( OnInit: [MainWindow::init], OnWindowClose: [MainWindow::on_exit], OnKeyPress: [MainWindow::on_key_press(SELF, EVT_DATA)] )]
+    #[nwg_events( OnInit: [MainWindow::init], OnWindowClose: [MainWindow::on_exit] )]
     window: nwg::Window,
 
 
@@ -117,7 +117,7 @@ pub struct MainWindow {
     
     #[nwg_control(parent: frame_presets, list_style: nwg::ListViewStyle::Simple)]
     #[nwg_layout_item(layout: frame_presets_layout, flex_grow: 2.0)]
-    #[nwg_events(OnListViewItemActivated: [MainWindow::presets_list_item_activated(SELF, EVT_DATA)], OnKeyPress: [MainWindow::presets_list_keypress(SELF, EVT_DATA)])]
+    #[nwg_events(OnListViewItemActivated: [MainWindow::presets_list_item_activated(SELF, EVT_DATA)])]
     presets_list: nwg::ListView,
 
     
@@ -137,7 +137,7 @@ pub struct MainWindow {
 
     #[nwg_control(parent: frame_scenes, list_style: nwg::ListViewStyle::Simple)]
     #[nwg_layout_item(layout: frame_scenes_layout, flex_grow: 2.0)]
-    #[nwg_events(OnListViewItemActivated: [MainWindow::scenes_list_item_activated(SELF, EVT_DATA)], OnKeyPress: [MainWindow::scenes_list_keypress(SELF, EVT_DATA)])]
+    #[nwg_events(OnListViewItemActivated: [MainWindow::scenes_list_item_activated(SELF, EVT_DATA)])]
     scenes_list: nwg::ListView,
 
 
@@ -406,85 +406,9 @@ impl MainWindow {
             None => {}
         }
     }
-
-    fn preset_delta(&self, delta: i16) {
-        let device_state = self.device_state.borrow();
-        if let Some(ref current_preset) = device_state.current_preset_and_scene {
-
-            let mut p = current_preset.preset as i16 + delta;
-            if p < 0 { p = 511; }
-            if p > 511 { p = 0; }
-
-            self.send(UiPayload::DeviceState(DeviceState::SetPreset { preset: p as u16 }));
-        }
-    }
-
-    fn previous_preset(&self) {
-        self.preset_delta(-1);
-    }
-
-    fn next_preset(&self) {
-        self.preset_delta(1);
-    }
-
-    fn scene_delta(&self, delta: i8) {
-        let device_state = self.device_state.borrow();
-        if let Some(ref current_preset) = device_state.current_preset_and_scene {
-
-            let mut s = current_preset.scene as i8 + delta;
-            if s < 0 { s = 7; }
-            if s > 7 { s = 0; }
-
-            self.send(UiPayload::DeviceState(DeviceState::SetScene { scene: s as u8 }));
-        }
-    }
-
-    fn previous_scene(&self) {
-        self.scene_delta(-1);
-    }
-
-    fn next_scene(&self) {
-        self.scene_delta(1);
-    }
-
-    fn on_key_press(&self, data: &nwg::EventData) {
-        //if let nwg::EventData::OnKey(key) = data {
-        //    trace!("key: {:#?}", key);
-        //}
-
-        //if *self.is_connected.borrow() == false { return; }
-
-        /*
-        if let nwg::EventData::OnKey(key) = data {
-            if *key == 'W' as u32 {
-                self.previous_scene();
-            } else if *key == 'S' as u32 {
-                self.next_scene();
-            } else if *key == 'D' as u32 {
-                self.next_preset();
-            } else if *key == 'A' as u32 {
-                self.previous_preset();
-            }
-        }
-        */
-
-        /*
-        if let nwg::EventData::OnKey(key) = data {
-            trace!("key: {:#?}", key);
-        }
-        */
-    }
-
+    
     fn presets_list_item_activated(&self, _data: &nwg::EventData) {
         self.preset_selected();
-    }
-
-    fn presets_list_keypress(&self, data: &nwg::EventData) {
-        if let nwg::EventData::OnKey(key) = data {
-            if *key == ' ' as u32 {
-                self.preset_selected();
-            }
-        }
     }
 
     fn preset_selected(&self) {
@@ -496,14 +420,6 @@ impl MainWindow {
 
     fn scenes_list_item_activated(&self, _data: &nwg::EventData) {
         self.scene_selected();
-    }
-
-    fn scenes_list_keypress(&self, data: &nwg::EventData) {
-        if let nwg::EventData::OnKey(key) = data {
-            if *key == ' ' as u32 {
-                self.scene_selected();
-            }
-        }
     }
 
     fn scene_selected(&self) {
