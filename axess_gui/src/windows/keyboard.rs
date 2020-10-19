@@ -1,4 +1,4 @@
-use std::borrow::Cow;
+use std::{borrow::Cow, fmt::Display};
 
 use axess_core::payload::{DeviceState, UiPayload};
 
@@ -69,6 +69,27 @@ pub enum Keys {
     Number9 = 57
 }
 
+impl Display for Keys {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let str = match self {
+            Keys::Number0 => "0",
+            Keys::Number1 => "1",
+            Keys::Number2 => "2",
+            Keys::Number3 => "3",
+            Keys::Number4 => "4",
+            Keys::Number5 => "5",
+            Keys::Number6 => "6",
+            Keys::Number7 => "7",
+            Keys::Number8 => "8",
+            Keys::Number9 => "9",
+            Keys::PageUp => "Page Up",
+            Keys::PageDown => "Page Down",
+            _ => { return f.write_fmt(format_args!("{:?}", self)); }
+        };
+        f.write_str(str)
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct KeyboardShortcut {
     pub key: KeyboardShortcutKey,
@@ -80,6 +101,20 @@ pub struct KeyboardShortcut {
 pub enum KeyboardShortcutKey {
     Key(Keys),
     CtrlKey(Keys)
+}
+
+impl Display for KeyboardShortcutKey {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            KeyboardShortcutKey::Key(k) => {
+                k.fmt(f)
+            }
+            KeyboardShortcutKey::CtrlKey(k) => {
+                f.write_str("Ctrl + ")?;
+                k.fmt(f)
+            }
+        }
+    }
 }
 
 #[derive(Debug, Clone)]

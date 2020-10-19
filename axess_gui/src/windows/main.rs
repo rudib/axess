@@ -65,10 +65,12 @@ pub struct MainWindow {
     #[nwg_control(text: "&Help")]
     menu_help: nwg::Menu,
 
-    #[nwg_control(text: "Keyboard shortcuts", parent: menu_help)]
+    #[nwg_control(text: "&Keyboard shortcuts", parent: menu_help)]
+    #[nwg_events ( OnMenuItemSelected: [MainWindow::on_keyboard_shortcuts] )]
     menu_help_shortcuts: nwg::MenuItem,
 
-    #[nwg_control(text: "About", parent: menu_help)]
+    #[nwg_control(text: "&About", parent: menu_help)]
+    #[nwg_events ( OnMenuItemSelected: [MainWindow::on_about] )]
     menu_help_about: nwg::MenuItem,
 
     #[nwg_layout(parent: window, flex_direction: FlexDirection::Column, padding: MAIN_PADDING)]
@@ -548,5 +550,32 @@ impl MainWindow {
             };
             self.blocks_bypass_toggle.set_text(button_label);
         }
+    }
+
+    fn on_keyboard_shortcuts(&self) {
+        let mut msg = "".to_string();
+        for shortcut in &*self.keyboard_shortcuts.borrow() {
+            msg.push_str(&format!("{}: {}\r\n", shortcut.key, shortcut.command_description));
+        }
+
+        let p = nwg::MessageParams {
+            title: "Keyboard shortcuts",
+            content: &msg,
+            buttons: nwg::MessageButtons::Ok,
+            icons: nwg::MessageIcons::None
+        };
+
+        nwg::modal_message(&self.window, &p);
+    }
+
+    fn on_about(&self) {
+        let p = nwg::MessageParams {
+            title: "About",
+            content: &format!("Axess version {}, Git SHA {}", env!("CARGO_PKG_VERSION"), env!("VERGEN_SHA_SHORT")),
+            buttons: nwg::MessageButtons::Ok,
+            icons: nwg::MessageIcons::None
+        };
+
+        nwg::modal_message(&self.window, &p);
     }
 }
