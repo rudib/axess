@@ -6,7 +6,7 @@ use log::trace;
 use std::{cell::RefCell};
 
 use axess_core::{payload::{PayloadConnection, UiPayload, DeviceState, PresetAndScene}, payload};
-use super::{common::{FractalWindow, WindowApi}, connect::ConnectWindow};
+use super::{common::{FractalWindow, WindowApi}, connect::ConnectWindow, update_list};
 use crate::{device_state::FrontendDeviceState, windows::main::main_window_ui::MainWindowUi};
 use super::status_bar::*;
 use crate::windows::keyboard::*;
@@ -318,32 +318,29 @@ impl MainWindow {
                 let ref mut device_state = self.device_state.borrow_mut();
                 device_state.current_preset_and_scene = Some(p.clone());
             },
-            Some(UiPayload::Presets(presets)) => {
-                self.presets_list.clear();
-                for p in &presets {
-                    self.presets_list.insert_item(format!("{:0>3} {}", p.number, p.name));
-                }
-                self.presets_list.set_visible(true);
-                self.presets_list.set_focus();
-
-                let mut state = self.device_state.borrow_mut();
+            Some(UiPayload::Presets(presets)) => {                
+                let mut state = self.device_state.borrow_mut();                
+                update_list(&self.presets_list, 
+                    &presets.iter().map(|p| format!("{:0>3} {}", p.number, p.name)).collect::<Vec<_>>(), 
+                    if let Some(ref current_preset) = state.current_preset_and_scene {
+                        Some(current_preset.preset as usize)
+                    } else {
+                        None
+                    }
+                );
                 state.presets = presets;
-                if let Some(ref current_preset) = state.current_preset_and_scene {                
-                    self.presets_list.select_item(current_preset.preset as usize, true);
-                }
             },
             Some(UiPayload::Scenes(scenes)) => {
-                self.scenes_list.clear();
-                for s in &scenes {
-                    self.scenes_list.insert_item(format!("Scene {} {}", s.number + 1, s.name));
-                }
-                self.scenes_list.set_visible(true);
-
                 let mut state = self.device_state.borrow_mut();
+                update_list(&self.scenes_list,
+                    &scenes.iter().map(|s| format!("Scene {} {}", s.number + 1, s.name)).collect::<Vec<_>>(),
+                    if let Some(ref current_preset) = state.current_preset_and_scene {
+                        Some(current_preset.scene as usize)
+                    } else {
+                        None
+                    }
+                );
                 state.current_presets_scenes = scenes;
-                if let Some(ref current_preset) = state.current_preset_and_scene {
-                    self.scenes_list.select_item(current_preset.scene as usize, true);
-                }
             },
             Some(UiPayload::CurrentBlocks(blocks)) => {
 
