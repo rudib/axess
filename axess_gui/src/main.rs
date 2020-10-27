@@ -19,7 +19,8 @@ mod device_state;
 
 fn main() -> Result<(), FractalCoreError> {
     // init logging
-    {
+    #[cfg(build_profile="debug")]
+    {        
         let stdout = ConsoleAppender::builder().target(Target::Stdout).build();
         let file = FileAppender::builder().build("axess.log")?;
         let config = Config::builder()
@@ -32,8 +33,19 @@ fn main() -> Result<(), FractalCoreError> {
             ).unwrap();
         log4rs::init_config(config).unwrap();
     }
+    #[cfg(not(build_profile="debug"))]
+    {
+        let file = FileAppender::builder().build("axess.log")?;
+        let config = Config::builder()
+            .appender(Appender::builder().build("file", Box::new(file)))
+            .build(Root::builder()
+                .appender("file")
+                .build(LevelFilter::Trace)
+            ).unwrap();
+        log4rs::init_config(config).unwrap();
+    }
 
-    info!("Axess starting. Git SHA {}", env!("VERGEN_SHA_SHORT"));
+    info!("Axess starting. Git SHA {}, build profile {}", env!("VERGEN_SHA_SHORT"), env!("BUILD_PROFILE"));
 
     nwg::init().expect("Failed to init Native Windows GUI");
     nwg::Font::set_global_family("Segoe UI").expect("Failed to set default font");
