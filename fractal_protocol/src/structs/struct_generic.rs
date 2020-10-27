@@ -1,6 +1,6 @@
 use packed_struct::{PackedStructSlice, PackingError, PrimitiveEnum};
 
-use crate::{functions::FractalFunction, model::FractalModel, FractalProtocolError};
+use crate::{FractalProtocolError, consts::SYSEX_MANUFACTURER, consts::SYSEX_START, functions::FractalFunction, model::FractalModel, consts::SYSEX_END};
 use super::{FractalFooter, FractalHeader, FractalMessageChecksum, calc_checksum};
 #[derive(Debug, Clone, PartialEq)]
 pub struct FractalAudioMessage<TData> where TData: PackedStructSlice + Clone {
@@ -47,7 +47,16 @@ impl<TData> FractalAudioMessageUnpacker for  FractalAudioMessage<TData> where TD
     fn unpack_from_slice_with_crc_check(src: &[u8]) -> Result<Self, FractalProtocolError> {
         let unpacked = Self::unpack_from_slice(src)?;
 
-        // TODO: check the headers
+        // header & footer constant checks
+        if unpacked.header.sysex_message_start != SYSEX_START {
+            return Err(FractalProtocolError::ConstantMismatch { constant: "sysex_message_start".into() });
+        }
+        if unpacked.header.sysex_manufacturer != SYSEX_MANUFACTURER {
+            return Err(FractalProtocolError::ConstantMismatch { constant: "sysex_message_start".into() });
+        }
+        if unpacked.footer.sysex_message_stop != SYSEX_END {
+            return Err(FractalProtocolError::ConstantMismatch { constant: "sysex_message_stop".into() });
+        }
 
         // check the CRC
         let crc_payload = &src[..src.len() - 2];

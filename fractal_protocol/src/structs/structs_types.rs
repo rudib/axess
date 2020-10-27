@@ -1,6 +1,6 @@
 use packed_struct::prelude::packed_bits;
 use packed_struct::{types::Integer};
-use crate::{model::FractalModel, buffer::SYSEX_END, buffer::SYSEX_START, buffer::SYSEX_MANUFACTURER};
+use crate::{consts::SYSEX_MANUFACTURER, consts::SYSEX_START, model::FractalModel, consts::SYSEX_END};
 
 #[derive(Debug, Copy, Clone, PackedStruct, PartialEq, Eq)]
 pub struct FractalHeader {
@@ -115,7 +115,7 @@ pub struct FractalString32 {
 
 impl FractalString32 {
     pub fn from_string(_s: &str) -> Option<Self> {
-        panic!("todo");
+        todo!()
     }
 
     pub fn try_as_string(&self) -> Option<String> {
