@@ -98,10 +98,12 @@ impl<TData> PackedStructSlice for FractalAudioMessage<TData> where TData: Packed
     }
 
     fn packed_bytes_size(opt_self: Option<&Self>) -> Result<usize, PackingError> {
-        let tuple = opt_self.map(|s| {
-            (s.header, [0], s.data.clone(), s.footer)
-        });
-        InternalTuple::<TData>::packed_bytes_size(tuple.as_ref())
+        let header = FractalHeader::packed_bytes_size(opt_self.map(|s| &s.header))?;
+        let func = 1;
+        let data = TData::packed_bytes_size(opt_self.map(|s| &s.data))?;
+        let footer = FractalFooter::packed_bytes_size(opt_self.map(|s| &s.footer))?;
+
+        Ok(header + func + data + footer)
     }
 }
 
