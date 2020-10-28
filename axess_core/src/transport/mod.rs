@@ -4,6 +4,7 @@ pub mod serial;
 
 use crate::{FractalResultVoid, FractalCoreError};
 use crossbeam_channel::{Receiver};
+use fractal_protocol::structs::FractalAudioMessagePacker;
 
 pub type TransportMessage = Vec<u8>;
 
@@ -28,14 +29,19 @@ pub trait Transport {
 pub trait TransportConnection {
     fn get_receiver(&self) -> &Receiver<TransportMessage>;
     fn write(&mut self, buf: &[u8]) -> FractalResultVoid;
+
+    fn write_msg(&mut self, msg: &mut dyn FractalAudioMessagePacker) -> FractalResultVoid {
+        let packed = msg.pack()?;
+        self.write(&packed)
+    }
 }
 
-pub fn write_struct<T: TransportConnection, P: packed_struct::PackedStructSlice>(connection: &mut T, s: &P) -> FractalResultVoid {
-    let msg = s.pack_to_vec()?;
+pub fn write_struct<T: TransportConnection, P: FractalAudioMessagePacker>(connection: &mut T, s: &mut P) -> FractalResultVoid {
+    let msg = s.pack()?;
     connection.write(&msg)
 }
 
-pub fn write_struct_dyn<P: packed_struct::PackedStructSlice>(connection: &mut dyn TransportConnection, s: &P) -> FractalResultVoid {
-    let msg = s.pack_to_vec()?;
+pub fn write_struct_dyn<P: FractalAudioMessagePacker>(connection: &mut dyn TransportConnection, s: &mut P) -> FractalResultVoid {
+    let msg = s.pack()?;
     connection.write(&msg)
 }

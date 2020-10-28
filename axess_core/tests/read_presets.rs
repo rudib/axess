@@ -82,7 +82,7 @@ fn block_effects() -> Result<(), FractalCoreError> {
         let mut connection = connection.ok_or(FractalCoreError::MissingValue("endpoint".into()))?;
         println!("connected?");
 
-        write_struct_dyn(&mut *connection.transport_endpoint, &BlocksHelper::get_current_blocks(connection.device.model))?;
+        write_struct_dyn(&mut *connection.transport_endpoint, &mut BlocksHelper::get_current_blocks(connection.device.model))?;
 
         tokio::time::delay_for(Duration::from_millis(500)).await;
 
