@@ -27,6 +27,7 @@ pub enum UiPayload {
 
     /// Internal
     Ping,
+    SettingsChanged,
     
     /// Hard shutdown
     Drop

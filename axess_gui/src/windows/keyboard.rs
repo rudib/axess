@@ -4,6 +4,8 @@ use axess_core::payload::{DeviceState, UiPayload};
 
 use packed_struct::PrimitiveEnum;
 
+use crate::config::AxessConfiguration;
+
 #[derive(Debug, Copy, Clone)]
 pub enum UiEvent {
     KeyDown(usize, u32),
@@ -66,7 +68,23 @@ pub enum Keys {
     Number6 = 54,
     Number7 = 55,
     Number8 = 56,   
-    Number9 = 57
+    Number9 = 57,
+    Fn1 = 0x70,
+    Fn2 = 0x71,
+    Fn3 = 0x72,
+    Fn4 = 0x73,
+    Fn5 = 0x74,
+    Fn6 = 0x75,
+    Fn7 = 0x76,
+    Fn8 = 0x77,
+    Fn9 = 0x78,
+    Fn10 = 0x79,
+    Fn11 = 0x7A,
+    Fn12 = 0x7B,
+    Fn13 = 0x7C,
+    Fn14 = 0x7D,
+    Fn15 = 0x7E,
+    Fn16 = 0x7F
 }
 
 impl Display for Keys {
@@ -84,6 +102,22 @@ impl Display for Keys {
             Keys::Number9 => "9",
             Keys::PageUp => "Page Up",
             Keys::PageDown => "Page Down",
+            Keys::Fn1 => "F1",
+            Keys::Fn2 => "F2",
+            Keys::Fn3 => "F3",
+            Keys::Fn4 => "F4",
+            Keys::Fn5 => "F5",
+            Keys::Fn6 => "F6",
+            Keys::Fn7 => "F7",
+            Keys::Fn8 => "F8",
+            Keys::Fn9 => "F9",
+            Keys::Fn10 => "F10",
+            Keys::Fn11 => "F11",
+            Keys::Fn12 => "F12",
+            Keys::Fn13 => "F13",
+            Keys::Fn14 => "F14",
+            Keys::Fn15 => "F15",
+            Keys::Fn16 => "F16",
             _ => { return f.write_fmt(format_args!("{:?}", self)); }
         };
         f.write_str(str)
@@ -123,34 +157,65 @@ pub enum ShortcutCommand {
     SelectPresetOrScene
 }
 
-pub fn get_main_keyboard_shortcuts() -> Vec<KeyboardShortcut> {
+pub fn get_main_keyboard_shortcuts(config: &AxessConfiguration) -> Vec<KeyboardShortcut> {
     let mut s = vec![
         KeyboardShortcut {
             key: KeyboardShortcutKey::Key(Keys::Enter),
             command_description: "Select the preset or scene".into(),
             command: ShortcutCommand::SelectPresetOrScene
-        },
-        KeyboardShortcut {
-            key: KeyboardShortcutKey::CtrlKey(Keys::PageUp),
-            command_description: "Preset Up".into(),
-            command: ShortcutCommand::UiPayload(UiPayload::DeviceState(DeviceState::DeltaPreset { delta: 1 }))
-        },
-        KeyboardShortcut {
-            key: KeyboardShortcutKey::CtrlKey(Keys::PageDown),
-            command_description: "Preset Down".into(),
-            command: ShortcutCommand::UiPayload(UiPayload::DeviceState(DeviceState::DeltaPreset { delta: -1 }))
         }
     ];
 
-    for i in 0..8 {
-        let key = Keys::from_primitive(Keys::Number1.to_primitive() + i);
-        if let Some(key) = key {
-            s.push(KeyboardShortcut {
-                key: KeyboardShortcutKey::CtrlKey(key),
-                command_description: format!("Select Scene {}", i + 1).into(),
-                command: ShortcutCommand::UiPayload(UiPayload::DeviceState(DeviceState::SetScene { scene: i }))
-            });
+    if config.keyboard_shortcuts_axe_edit {
+
+        s.push(KeyboardShortcut {
+            key: KeyboardShortcutKey::CtrlKey(Keys::PageUp),
+            command_description: "Preset Up".into(),
+            command: ShortcutCommand::UiPayload(UiPayload::DeviceState(DeviceState::DeltaPreset { delta: 1 }))
+        });
+
+        s.push(KeyboardShortcut {
+            key: KeyboardShortcutKey::CtrlKey(Keys::PageDown),
+            command_description: "Preset Down".into(),
+            command: ShortcutCommand::UiPayload(UiPayload::DeviceState(DeviceState::DeltaPreset { delta: -1 }))
+        });
+
+        for i in 0..8 {
+            let key = Keys::from_primitive(Keys::Number1.to_primitive() + i);
+            if let Some(key) = key {
+                s.push(KeyboardShortcut {
+                    key: KeyboardShortcutKey::CtrlKey(key),
+                    command_description: format!("Select Scene {}", i + 1).into(),
+                    command: ShortcutCommand::UiPayload(UiPayload::DeviceState(DeviceState::SetScene { scene: i }))
+                });
+            }
         }
+
+    }
+
+    if config.keyboard_shortcuts_presets_and_scenes_function_keys {
+        for i in 0..8 {
+            let key = Keys::from_primitive(Keys::Fn1.to_primitive() + i);
+            if let Some(key) = key {
+                s.push(KeyboardShortcut {
+                    key: KeyboardShortcutKey::Key(key),
+                    command_description: format!("Select Scene {}", i + 1).into(),
+                    command: ShortcutCommand::UiPayload(UiPayload::DeviceState(DeviceState::SetScene { scene: i }))
+                });
+            }
+        }
+
+        s.push(KeyboardShortcut {
+            key: KeyboardShortcutKey::Key(Keys::Fn9),
+            command_description: "Preset Down".into(),
+            command: ShortcutCommand::UiPayload(UiPayload::DeviceState(DeviceState::DeltaPreset { delta: -1 }))
+        });
+
+        s.push(KeyboardShortcut {
+            key: KeyboardShortcutKey::Key(Keys::Fn10),
+            command_description: "Preset Up".into(),
+            command: ShortcutCommand::UiPayload(UiPayload::DeviceState(DeviceState::DeltaPreset { delta: 1 }))
+        });
     }
     
     s

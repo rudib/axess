@@ -59,23 +59,27 @@ impl FractalWindow for SettingsWindow {
         &self.backend_response_notifier
     }
 
-    fn handle_ui_event(&self, event: UiEvent) -> bool {
+    fn handle_ui_event(&self, _event: UiEvent) -> bool {
         true
     }
 }
 
 impl SettingsWindow {
     fn init(&self) {
-        let config = self.get_window_api_initialized().config.borrow();
-        self.checkbox_keys_axe.set_check_state(if config.keyboard_shortcuts_axe_edit { CheckBoxState::Checked } else { CheckBoxState::Unchecked });
-        self.checkbox_keys_fn.set_check_state(if config.keyboard_shortcuts_presets_and_scenes_function_keys { CheckBoxState::Checked } else { CheckBoxState::Unchecked });
+        if let Ok(config) = self.get_window_api_initialized().config.lock() {
+            self.checkbox_keys_axe.set_check_state(if config.keyboard_shortcuts_axe_edit { CheckBoxState::Checked } else { CheckBoxState::Unchecked });
+            self.checkbox_keys_fn.set_check_state(if config.keyboard_shortcuts_presets_and_scenes_function_keys { CheckBoxState::Checked } else { CheckBoxState::Unchecked });
+        }
     }
 
     fn save(&self) {
-        let mut config = self.get_window_api_initialized().config.borrow_mut();
-        config.keyboard_shortcuts_axe_edit = if self.checkbox_keys_axe.check_state() == CheckBoxState::Checked { true } else { false };
-        config.keyboard_shortcuts_presets_and_scenes_function_keys = if self.checkbox_keys_fn.check_state() == CheckBoxState::Checked { true } else { false };
-        config.save();
+        if let Ok(mut config) = self.get_window_api_initialized().config.lock() {
+            config.keyboard_shortcuts_axe_edit = if self.checkbox_keys_axe.check_state() == CheckBoxState::Checked { true } else { false };
+            config.keyboard_shortcuts_presets_and_scenes_function_keys = if self.checkbox_keys_fn.check_state() == CheckBoxState::Checked { true } else { false };
+            config.save();
+        }
+
+        self.send(UiPayload::SettingsChanged);
 
         self.on_exit();
     }

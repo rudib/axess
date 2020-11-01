@@ -105,14 +105,14 @@ pub trait FractalWindow {
 #[derive(Clone)]
 pub struct WindowApi {
     api: RefCell<UiApi>,
-    pub config: RefCell<AxessConfiguration>
+    pub config: Arc<Mutex<AxessConfiguration>>
 }
 
 impl WindowApi {
     pub fn new(api: UiApi, config: AxessConfiguration) -> Self {
         WindowApi {
             api: RefCell::new(api),
-            config: RefCell::new(config)
+            config: Arc::new(Mutex::new(config))
         }
     }
 }

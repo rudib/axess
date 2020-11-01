@@ -3,7 +3,7 @@ use fractal_protocol::{effect::EffectId, messages::effects::EffectStatus};
 use native_windows_gui::{Tab, TabsContainer};
 use log::trace;
 
-use std::{cell::RefCell, sync::{Arc, Mutex}};
+use std::{borrow::Borrow, cell::RefCell, sync::{Arc, Mutex}};
 
 use axess_core::{payload::{PayloadConnection, UiPayload, DeviceState, PresetAndScene}, payload};
 use super::{common::{FractalWindow, WindowApi}, connect::ConnectWindow, settings::SettingsWindow, update_list};
@@ -272,7 +272,7 @@ impl MainWindow {
     }
 
     fn init(&self) {        
-        *self.keyboard_shortcuts.borrow_mut() = get_main_keyboard_shortcuts();
+        self.on_settings_updated();
         self.main_controls_when_connected(false);
         self.axess_status_bar.borrow_mut().op(&self.status_bar).push_message(AxessStatusBarMessageKind::Default, "Not connected.".into());
         self.send(UiPayload::Connection(PayloadConnection::TryToAutoConnect));        
@@ -288,8 +288,17 @@ impl MainWindow {
         self.send(UiPayload::Connection(PayloadConnection::Disconnect));
     }
 
+    fn on_settings_updated(&self) {
+        if let Ok(config) = self.get_window_api_initialized().config.lock() {
+            *self.keyboard_shortcuts.borrow_mut() = get_main_keyboard_shortcuts(&config);
+        }
+    }
+
     fn backend_response(&self) {
         match self.recv() {
+            Some(UiPayload::SettingsChanged) => {
+                self.on_settings_updated();
+            }
             Some(UiPayload::Connection(PayloadConnection::AutoConnectDeviceNotFound)) => {
                 // start the connect window
                 //self.spawn_child::<ConnectWindow>(());

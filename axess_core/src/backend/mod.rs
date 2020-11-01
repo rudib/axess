@@ -217,7 +217,8 @@ impl UiBackend {
             UiPayload::Drop => {}
             UiPayload::DeviceState(_) => {}
             UiPayload::EffectStatus(_) => {}
-            UiPayload::EffectBypassStatus(_) => {}            
+            UiPayload::EffectBypassStatus(_) => {}
+            UiPayload::SettingsChanged => {}            
             UiPayload::ProgressReport { .. } => {}
         }
 
