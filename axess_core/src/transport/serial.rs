@@ -10,9 +10,9 @@ use crate::{FractalResultVoid, FractalCoreError};
 use std::{time::Duration, io::{Write, self}, sync::{Mutex, Arc}};
 use super::{TransportConnection, Transport, TransportEndpoint, TransportMessage};
 use crossbeam_channel::{Receiver};
+use fractal_protocol::consts::SYSEX_END;
 use io::{BufReader, BufRead};
 use serialport::SerialPort;
-use fractal_protocol::buffer::SYSEX_END;
 use log::{error, info, trace};
 
 #[derive(Debug, Clone)]

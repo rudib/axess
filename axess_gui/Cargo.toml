@@ -6,17 +6,34 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[[bin]]
+name = "axess"
+path = "src/main.rs"
+
 [dependencies]
 fractal_protocol = { path = "../fractal_protocol/" }
 axess_core = { path = "../axess_core/" }
 
-native-windows-gui = "1.0"
-native-windows-derive = "1.0"
+#native-windows-gui = "1.0"
+#native-windows-derive = "1.0"
+
+#native-windows-gui = { path = "c:\\code\\github\\native-windows-gui\\native-windows-gui\\" }
+#native-windows-derive = { path = "c:\\code\\github\\native-windows-gui\\native-windows-derive\\" }
+
+native-windows-gui = { git = "https://github.com/rudib/native-windows-gui", branch = "pretranslate_callback" }
+native-windows-derive = { git = "https://github.com/rudib/native-windows-gui", branch = "pretranslate_callback" }
 
 broadcaster="1.0"
 futures = "0.3"
 log = "0.4"
 log4rs = "0.13"
+
+packed_struct = "0.4"
+packed_struct_codegen = "0.4"
+
+directories = "3.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
 
 [build-dependencies]
 vergen = "3"

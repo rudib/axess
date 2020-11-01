@@ -32,7 +32,7 @@ fn read_all_presets() -> Result<(), FractalCoreError> {
         let total_presets = connection.device.model.number_of_presets().unwrap();
         
         for i in 0..total_presets {
-            let preset: PresetAndName = connection.send_and_wait_for(&PresetHelper::get_preset_info(connection.device.model, i).pack_to_vec()?)
+            let preset: PresetAndName = connection.send_and_wait_for(&mut PresetHelper::get_preset_info(connection.device.model, i))
                 .await.map_err(|_| FractalCoreError::MissingValue("Preset".into()))?;
             println!("preset: {:?}", preset);
         }
@@ -82,7 +82,7 @@ fn block_effects() -> Result<(), FractalCoreError> {
         let mut connection = connection.ok_or(FractalCoreError::MissingValue("endpoint".into()))?;
         println!("connected?");
 
-        write_struct_dyn(&mut *connection.transport_endpoint, &BlocksHelper::get_current_blocks(connection.device.model))?;
+        write_struct_dyn(&mut *connection.transport_endpoint, &mut BlocksHelper::get_current_blocks(connection.device.model))?;
 
         tokio::time::delay_for(Duration::from_millis(500)).await;
 

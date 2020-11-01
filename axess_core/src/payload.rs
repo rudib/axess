@@ -20,9 +20,14 @@ pub enum UiPayload {
     EffectStatus(Effects),
     SetEffectBypass { effect: EffectId, is_bypassed: bool },
     EffectBypassStatus(EffectBypassStatus),
+    ProgressReport {
+        i: usize,
+        total: usize
+    },
 
     /// Internal
     Ping,
+    SettingsChanged,
     
     /// Hard shutdown
     Drop
@@ -56,17 +61,23 @@ pub struct ConnectToMidiPorts {
     pub output_port: String
 }
 */
+
+
+
 #[derive(Debug, Clone)]
 pub enum DeviceState {
     PresetAndScene(PresetAndScene),
     SetPreset { preset: u16 },
-    SetScene { scene: u8 }
+    SetScene { scene: u8 },
+    DeltaPreset { delta: isize },
+    DeltaScene { delta: isize }
 }
 
 #[derive(Default, Debug, Clone)]
 pub struct PresetAndScene {
     pub preset: u16,
     pub preset_name: String,
+    /// 0-based
     pub scene: u8,
     pub scene_name: String
 }

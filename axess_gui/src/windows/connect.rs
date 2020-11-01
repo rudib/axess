@@ -4,7 +4,7 @@ use nwg::{ComboBox, NativeUi};
 use std::{cell::RefCell, sync::{Mutex, Arc}};
 
 use axess_core::{payload::{PayloadConnection, UiPayload}, transport::Endpoint};
-use super::common::{FractalWindow, WindowApi};
+use super::{common::{FractalWindow, WindowApi}, keyboard::UiEvent};
 use crate::windows::connect::connect_window_ui::ConnectWindowUi;
 
 #[derive(NwgUi, Default)]
@@ -54,6 +54,10 @@ impl FractalWindow for ConnectWindow {
 
     fn get_notice(&self) -> &nwg::Notice {
         &self.backend_response_notifier
+    }
+
+    fn handle_ui_event(&self, event: UiEvent) -> bool {
+        true
     }
 }
 

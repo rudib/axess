@@ -124,22 +124,50 @@ impl UiBackend {
             },
             UiPayload::DeviceState(crate::payload::DeviceState::SetScene { scene }) => {
                 if let Some(ref mut device) = self.device {
-                    device.write(&SceneWithNameHelper::set_current_scene_number(device.device.model, scene))?;
+                    device.write(&mut SceneWithNameHelper::set_current_scene_number(device.device.model, scene))?;
                 }
 
                 tokio::time::delay_for(Duration::from_millis(10)).await;
                 self.status_poll().await?;
-            },
+            }
+            UiPayload::DeviceState(crate::payload::DeviceState::DeltaPreset { delta }) => {
+                if let Some(ref mut device) = self.device {
+                    let new_preset = {
+                        let p = device.state.preset_number as i16 + delta as i16;
+                        if p < 0 { 511 }
+                        else if p > 511 { 0 }
+                        else { p }
+                    };
+
+                    self.send(UiPayload::DeviceState(crate::payload::DeviceState::SetPreset { preset: new_preset as u16 })).await?;
+                }
+            }
+            UiPayload::DeviceState(crate::payload::DeviceState::DeltaScene { delta }) => {
+                if let Some(ref mut device) = self.device {
+                    let new_scene = {
+                        let s = device.state.scene_number as i8 + delta as i8;
+                        if s < 0 { 7 }
+                        else if s > 7 { 0 }
+                        else { s }
+                    };
+
+                    self.send(UiPayload::DeviceState(crate::payload::DeviceState::SetScene { scene: new_scene as u8 })).await?;
+                }
+            }
             UiPayload::RequestAllPresets => {
-                //if let Some(ref mut device) = self.device
-                let device = self.device.as_mut().ok_or(FractalCoreError::NotConnected)?;
-                let presets_count = device.device.model.number_of_presets().ok_or(FractalCoreError::MissingValue("Number of presets".into()))?;
+                
+                let presets_count = {
+                    let device = self.device.as_mut().ok_or(FractalCoreError::NotConnected)?;
+                    device.device.model.number_of_presets().ok_or(FractalCoreError::MissingValue("Number of presets".into()))?
+                };
         
                 let mut presets = vec![];
                 for i in 0..presets_count {
-                    let preset = device.send_and_wait_for(&PresetHelper::get_preset_info(device.device.model, i))
+                    let device = self.device.as_mut().ok_or(FractalCoreError::NotConnected)?;
+                    let preset = device.send_and_wait_for(&mut PresetHelper::get_preset_info(device.device.model, i))
                         .await.map_err(|_| FractalCoreError::MissingValue("Preset".into()))?;
                     presets.push(preset);
+                    self.send(UiPayload::ProgressReport { i: i as usize, total: presets_count as usize }).await?;
                 }
 
                 self.send(UiPayload::Presets(presets)).await?;
@@ -150,7 +178,7 @@ impl UiBackend {
 
                 let mut scenes = vec![];
                 for i in 0..scenes_count {
-                    let scene = device.send_and_wait_for(&SceneWithNameHelper::get_scene_info(device.device.model, i))
+                    let scene = device.send_and_wait_for(&mut SceneWithNameHelper::get_scene_info(device.device.model, i))
                         .await.map_err(|_| FractalCoreError::MissingValue("Scene".into()))?;
                     scenes.push(scene);
                 }
@@ -160,14 +188,14 @@ impl UiBackend {
             UiPayload::RequestCurrentBlocks => {
                 let device = self.device.as_mut().ok_or(FractalCoreError::NotConnected)?;
 
-                let blocks: Blocks = device.send_and_wait_for(&BlocksHelper::get_current_blocks(device.device.model))
+                let blocks: Blocks = device.send_and_wait_for(&mut BlocksHelper::get_current_blocks(device.device.model))
                                         .await.map_err(|_| FractalCoreError::MissingValue("Blocks".into()))?;
                 self.send(UiPayload::CurrentBlocks(blocks)).await?;
             },
             UiPayload::RequestEffectStatus => {
                 let device = self.device.as_mut().ok_or(FractalCoreError::NotConnected)?;
 
-                let effects: Effects = device.send_and_wait_for(&EffectStatusHelper::get_status_dump(device.device.model))
+                let effects: Effects = device.send_and_wait_for(&mut EffectStatusHelper::get_status_dump(device.device.model))
                                         .await.map_err(|_| FractalCoreError::MissingValue("Status Dump".into()))?;
 
                 self.send(UiPayload::EffectStatus(effects)).await?;
@@ -176,7 +204,7 @@ impl UiBackend {
                 let device = self.device.as_mut().ok_or(FractalCoreError::NotConnected)?;
 
                 //write_struct_dyn(&mut *device.transport_endpoint, &EffectBypassHelper::set_effect_bypass(device.device.model, effect, is_bypassed))?;
-                let effect_status: EffectBypassStatus = device.send_and_wait_for(&EffectBypassHelper::set_effect_bypass(device.device.model, effect, is_bypassed))
+                let effect_status: EffectBypassStatus = device.send_and_wait_for(&mut EffectBypassHelper::set_effect_bypass(device.device.model, effect, is_bypassed))
                                                               .await.map_err(|_| FractalCoreError::MissingValue("Effect Bypass Status".into()))?;
                 self.send(UiPayload::EffectBypassStatus(effect_status)).await?;
             }
@@ -190,7 +218,8 @@ impl UiBackend {
             UiPayload::DeviceState(_) => {}
             UiPayload::EffectStatus(_) => {}
             UiPayload::EffectBypassStatus(_) => {}
-            
+            UiPayload::SettingsChanged => {}            
+            UiPayload::ProgressReport { .. } => {}
         }
 
         Ok(())
@@ -246,7 +275,7 @@ impl UiBackend {
 
             PayloadConnection::Disconnect => {
                 if let Some(mut device) = self.device.take() {
-                    device.transport_endpoint.write(&MultipurposeResponseHelper::disconnect_from_controller(device.device.model).pack_to_vec().unwrap())?;
+                    device.transport_endpoint.write_msg(&mut MultipurposeResponseHelper::disconnect_from_controller(device.device.model))?;
                 }
                 
                 self.send(UiPayload::Connection(PayloadConnection::Disconnected)).await?;
@@ -293,10 +322,11 @@ impl UiBackend {
                     self.poll_failures = 0;
                 },
                 Err(e) => {
-                    // failed to poll the device. disconnect.
+                    // failed to poll the device.
                     self.poll_failures += 1;
                     error!("Polling failed (attempt {}): {:?}", self.poll_failures, e);
 
+                    // too many polling failures, disconnect.
                     if self.poll_failures >= max_poll_failures {
                         error!("Max poll failures, disconnecting.");
                         self.channel.send(&UiPayload::Connection(PayloadConnection::Disconnect)).await?;
@@ -308,6 +338,7 @@ impl UiBackend {
         if updated {
             self.send_device_state().await?;
             self.send(UiPayload::RequestScenes).await?;
+            self.send(UiPayload::RequestEffectStatus).await?;
         }
 
         Ok(())
@@ -333,7 +364,9 @@ impl UiBackend {
         self.send(UiPayload::Connection(PayloadConnection::Connected { device: info })).await?;
         self.send_device_state().await?;
         self.status_poller = Box::pin(tokio::time::interval(Duration::from_millis(1000)));
-        Ok(())        
+        self.send(UiPayload::RequestScenes).await?;
+        self.send(UiPayload::RequestEffectStatus).await?;
+        Ok(())
     }
 
     fn on_disconnect(&mut self) {
@@ -386,7 +419,7 @@ impl UiBackend {
         trace!("Detected Fractal Model {:?}", model);
 
         // request the firmware version
-        write_struct_dyn(&mut *connection, &FirmwareVersionHelper::get_request(model))?;
+        write_struct_dyn(&mut *connection, &mut FirmwareVersionHelper::get_request(model))?;
 
         let firmware = filter_first(&mut midi_messages, |msg| {
             match msg {
