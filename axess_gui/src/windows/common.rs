@@ -4,6 +4,8 @@ use futures::{executor::block_on, future::Either};
 use nwg::{NativeUi};
 use log::trace;
 
+use crate::config::AxessConfiguration;
+
 use super::keyboard::UiEvent;
 
 pub trait FractalWindow {
@@ -102,13 +104,15 @@ pub trait FractalWindow {
 }
 #[derive(Clone)]
 pub struct WindowApi {
-    api: RefCell<UiApi>
+    api: RefCell<UiApi>,
+    pub config: RefCell<AxessConfiguration>
 }
 
 impl WindowApi {
-    pub fn new(api: UiApi) -> Self {
+    pub fn new(api: UiApi, config: AxessConfiguration) -> Self {
         WindowApi {
-            api: RefCell::new(api)
+            api: RefCell::new(api),
+            config: RefCell::new(config)
         }
     }
 }

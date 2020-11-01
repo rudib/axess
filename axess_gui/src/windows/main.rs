@@ -3,11 +3,11 @@ use fractal_protocol::{effect::EffectId, messages::effects::EffectStatus};
 use native_windows_gui::{Tab, TabsContainer};
 use log::trace;
 
-use std::{cell::RefCell};
+use std::{cell::RefCell, sync::{Arc, Mutex}};
 
 use axess_core::{payload::{PayloadConnection, UiPayload, DeviceState, PresetAndScene}, payload};
-use super::{common::{FractalWindow, WindowApi}, connect::ConnectWindow, update_list};
-use crate::{device_state::FrontendDeviceState, windows::main::main_window_ui::MainWindowUi};
+use super::{common::{FractalWindow, WindowApi}, connect::ConnectWindow, settings::SettingsWindow, update_list};
+use crate::{config::AxessConfiguration, device_state::FrontendDeviceState, windows::main::main_window_ui::MainWindowUi};
 use super::status_bar::*;
 use crate::windows::keyboard::*;
 
@@ -61,6 +61,10 @@ pub struct MainWindow {
     #[nwg_control(text: "Exit", parent: menu_device)]
     #[nwg_events( OnMenuItemSelected: [MainWindow::on_exit] )]
     menu_device_exit: nwg::MenuItem,
+
+    #[nwg_control(text: "&Settings")]
+    #[nwg_events ( OnMenuItemSelected: [MainWindow::on_settings] )]
+    menu_settings: nwg::MenuItem,
 
     #[nwg_control(text: "&Help")]
     menu_help: nwg::Menu,
@@ -180,7 +184,6 @@ pub struct MainWindow {
     backend_response_notifier: nwg::Notice,
 
 
-
     pub ui_api: Option<WindowApi>,
 
     pub device_state: RefCell<FrontendDeviceState>,
@@ -268,7 +271,7 @@ impl MainWindow {
         self.frame_status.set_visible(visibility);
     }
 
-    fn init(&self) {
+    fn init(&self) {        
         *self.keyboard_shortcuts.borrow_mut() = get_main_keyboard_shortcuts();
         self.main_controls_when_connected(false);
         self.axess_status_bar.borrow_mut().op(&self.status_bar).push_message(AxessStatusBarMessageKind::Default, "Not connected.".into());
@@ -463,6 +466,10 @@ impl MainWindow {
             };
             self.blocks_bypass_toggle.set_text(button_label);
         }
+    }
+
+    fn on_settings(&self) {
+        self.spawn_child::<SettingsWindow>(());
     }
 
     fn on_keyboard_shortcuts(&self) {

@@ -5,6 +5,7 @@ pub mod main;
 pub mod common;
 pub mod status_bar;
 pub mod keyboard;
+pub mod settings;
 
 fn update_list(list: &nwg::ListView, items: &[String], selected_item: Option<usize>) {
     let max_str_len = 256;
