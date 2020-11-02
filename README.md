@@ -1,6 +1,12 @@
 # Axess Fractal Audio Editor
 
-A very basic client for Fractal Audio Axe-FX III and FM3. Provides a very simple, plain Windows interface for accessibility and ease of use.
+A very basic client for Fractal Audio Axe-FX III and FM3. Provides a very simple, plain Windows interface for accessibility and ease of use. Developed for the audience where the official editor or other third party editors are not compatible with screen readers or other accessibility software.
+
+Available for Windows only.
+
+At the moment, the FM3 communication is slow and it might take 20 seconds for the list of presets to be retrieved.
+
+![Axess screenshot](axess.png)
 
 ## Keyboard shortcuts
 
@@ -11,18 +17,15 @@ Ctrl + PgUp/PgDn: Preset Up/Down
 Ctrl + 1/2/3/4/5/6/7/8: Select a scene
 Spacebar: bypass or engage the selected block
 
+Optional function key shortcuts:
 
-<!--
-### WASD buttons for preset/scene changes
+F1-F8: Scene selection
+F11, F12: Preset Down/Up
 
-Mimics the buttons on the front panel of the hardware.
+## Download
 
-W: Previous Scene (-1)
-S: Next Scene (+1)
-A: Previous Preset (-1)
-D: Next Preset (+1)
--->
+Download the latest binary from the [Releases section](https://github.com/rudib/axess/releases). Note that the binaries are not signed and you'll have to convince Windows that this isn't malware.
 
-## Running
+## For developers
 
-`cargo run` should build and run the `axess_gui` project.
+![Rust](https://github.com/rudib/axess/workflows/Rust/badge.svg)

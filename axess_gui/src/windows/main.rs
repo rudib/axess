@@ -359,6 +359,7 @@ impl MainWindow {
                 self.menu_device_connect.set_enabled(true);
                 self.menu_device_disconnect.set_enabled(false);
                 *self.is_connected.borrow_mut() = false;
+                *self.device_state.borrow_mut() = FrontendDeviceState::default();
             },
             Some(UiPayload::DeviceState(DeviceState::PresetAndScene(ref p))) => {
                 self.status_preset.set_text(&format!("{:0>3} {}", p.preset, p.preset_name));
