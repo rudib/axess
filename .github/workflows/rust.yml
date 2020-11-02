@@ -27,8 +27,14 @@ jobs:
     - name: Build (release)
       run: cargo build --release -- -C link_args="-Wl,--subsystem,windows"
       if: startsWith(github.ref, 'refs/tags/')
+    - name: Get the tag version
+      if: startsWith(github.ref, 'refs/tags/')
+      id: get_version
+      run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+      shell: bash
     - name: Copy to versioned exe
-      run: copy target/release/axess.exe target/release/axess-${GITHUB_REF/refs\/tags\//''}.exe
+      if: startsWith(github.ref, 'refs/tags/')
+      run: copy target/release/axess.exe target/release/axess-${{ steps.get_version.outputs.VERSION }}.exe
     - name: Release (with tags)
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
