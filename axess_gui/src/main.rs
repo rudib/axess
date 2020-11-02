@@ -1,3 +1,4 @@
+#![windows_subsystem = "windows"]
 #![allow(unused_imports)]
 
 extern crate fractal_protocol;
