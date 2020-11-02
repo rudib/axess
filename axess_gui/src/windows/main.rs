@@ -16,7 +16,7 @@ use packed_struct::PrimitiveEnum;
 // Stretch style
 use nwg::stretch::{geometry::{Size, Rect}, style::{Dimension as D, FlexDirection, AlignSelf}};
 
-const SCENE_WIDTH: D = D::Points(300.0);
+const SCENE_WIDTH: D = D::Points(230.0);
 
 const STATUS_SIZE: Size<D> = Size { width: D::Auto, height: D::Points(50.0) };
 const STATUS_SCENES_SIZE: Size<D> = Size { width: SCENE_WIDTH, height: D::Auto };
@@ -387,7 +387,7 @@ impl MainWindow {
 
                 self.update_scenes_list();
             },
-            Some(UiPayload::CurrentBlocks(blocks)) => {
+            Some(UiPayload::CurrentBlocks(_)) => {
 
             },
             Some(UiPayload::EffectStatus(effects)) => {

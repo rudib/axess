@@ -26,7 +26,7 @@ pub enum KeyboardCombination {
 impl KeyboardState {
     pub fn handle_event(&mut self, ev: &UiEvent) -> Option<KeyboardCombination> {
         const CTRL: usize = 0x11;
-        const ALT: usize = 0x12;
+        //const ALT: usize = 0x12;
 
         match *ev {
             UiEvent::KeyDown(CTRL, _) => {

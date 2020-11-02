@@ -2,7 +2,7 @@ use crate::FractalCoreError;
 use ::fractal_protocol::{model::{FractalModel}};
 
 use midir::{MidiInput, MidiOutput, Ignore, MidiInputConnection, MidiOutputConnection};
-use log::{trace};
+use log::{error, trace};
 use super::{TransportMessage, Transport, TransportConnection};
 use crossbeam_channel::Receiver;
 
@@ -133,12 +133,15 @@ impl Transport for Midi {
 
                     let (tx, rx) = crossbeam_channel::unbounded();
 
-                    let in_connection = midi_in.connect(&midi_in_port, &format!("{} Axess In", &self.client_name), move |stamp, message, data| {
+                    let in_connection = midi_in.connect(&midi_in_port, &format!("{} Axess In", &self.client_name), move |stamp, message, _data| {
                         trace!("MIDI input: {}: {:x?} (len = {})", stamp, message, message.len());
-                        tx.send(message.to_vec());
+                        let tx = tx.send(message.to_vec());
+                        if let Err(err) = tx {
+                            error!("Error sending MIDI's input to channel: {:?}", err);
+                        }
                     }, ())?;
 
-                    let mut out_connection = midi_out.connect(&midi_out_port, &format!("{} Axess Out", &self.client_name))?;
+                    let out_connection = midi_out.connect(&midi_out_port, &format!("{} Axess Out", &self.client_name))?;
 
                     trace!("MIDI connection initialized");
 
