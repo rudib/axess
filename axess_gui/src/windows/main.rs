@@ -119,7 +119,7 @@ pub struct MainWindow {
     #[nwg_layout_item(layout: frame_presets_layout)]
     presets_label_presets: nwg::Label,
     
-    #[nwg_control(parent: frame_presets, list_style: nwg::ListViewStyle::Simple)]
+    #[nwg_control(parent: frame_presets, list_style: nwg::ListViewStyle::Simple, flags: "TAB_STOP|VISIBLE|ALWAYS_SHOW_SELECTION")]
     #[nwg_layout_item(layout: frame_presets_layout, flex_grow: 2.0)]
     #[nwg_events(OnListViewItemActivated: [MainWindow::presets_list_item_activated(SELF, EVT_DATA)])]
     presets_list: nwg::ListView,
@@ -139,7 +139,7 @@ pub struct MainWindow {
     presets_label_scenes: nwg::Label,
 
 
-    #[nwg_control(parent: frame_scenes, list_style: nwg::ListViewStyle::Simple)]
+    #[nwg_control(parent: frame_scenes, list_style: nwg::ListViewStyle::Simple, flags: "TAB_STOP|VISIBLE|ALWAYS_SHOW_SELECTION")]
     #[nwg_layout_item(layout: frame_scenes_layout, flex_grow: 2.0)]
     #[nwg_events(OnListViewItemActivated: [MainWindow::scenes_list_item_activated(SELF, EVT_DATA)])]
     scenes_list: nwg::ListView,
@@ -174,8 +174,10 @@ pub struct MainWindow {
     #[nwg_events(OnButtonClick: [MainWindow::effect_bypass_toggle])]
     blocks_bypass_toggle: nwg::Button,
 
-    
-    #[nwg_control(text: "", parent: window)]
+    #[nwg_resource(family: "Segoe UI", size: 15)]
+    status_bar_font: nwg::Font,
+
+    #[nwg_control(text: "", parent: window, font: Some(&data.status_bar_font))]
     status_bar: nwg::StatusBar,
 
 
@@ -272,6 +274,14 @@ impl MainWindow {
     }
 
     fn init(&self) {        
+
+        self.scenes_list.insert_column(nwg::InsertListViewColumn {
+            index: None,
+            fmt: None,
+            width: Some(200),
+            text: Some("Scene".to_string())
+        });
+
         self.on_settings_updated();
         self.main_controls_when_connected(false);
         self.axess_status_bar.borrow_mut().op(&self.status_bar).push_message(AxessStatusBarMessageKind::Default, "Not connected.".into());
@@ -292,6 +302,35 @@ impl MainWindow {
         if let Ok(config) = self.get_window_api_initialized().config.lock() {
             *self.keyboard_shortcuts.borrow_mut() = get_main_keyboard_shortcuts(&config);
         }
+    }
+
+    fn update_presets_list(&self) {
+        let state = self.device_state.borrow();                
+        let selected_item = if let Some(ref current_preset) = state.current_preset_and_scene {
+            Some(current_preset.preset as usize)
+        } else {
+            None
+        };
+
+        update_list(&self.presets_list, 
+            &state.presets.iter().map(|p| format!("{:0>3} {}{}", p.number, p.name,
+            if Some(p.number as usize) == selected_item { " *" } else { "" })).collect::<Vec<_>>(), 
+            selected_item
+        );
+    }
+
+    fn update_scenes_list(&self) {
+        let state = self.device_state.borrow();
+        let selected_item = if let Some(ref current_preset) = state.current_preset_and_scene {
+            Some(current_preset.scene as usize)
+        } else {
+            None
+        };
+        update_list(&self.scenes_list,
+            &state.current_presets_scenes.iter().map(|s| format!("Scene {} {}{}", s.number + 1, s.name,
+            if Some(s.number as usize) == selected_item { " *" } else { "" })).collect::<Vec<_>>(),
+            selected_item
+        );
     }
 
     fn backend_response(&self) {
@@ -326,33 +365,27 @@ impl MainWindow {
                 self.status_scene.set_text(&format!("Scene {} {}", p.scene + 1, p.scene_name));
 
                 // todo: select in the items
+                {
+                    let ref mut device_state = self.device_state.borrow_mut();
+                    device_state.current_preset_and_scene = Some(p.clone());
+                }
 
-                let ref mut device_state = self.device_state.borrow_mut();
-                device_state.current_preset_and_scene = Some(p.clone());
+                self.update_presets_list();
             },
-            Some(UiPayload::Presets(presets)) => {                
-                let mut state = self.device_state.borrow_mut();                
-                update_list(&self.presets_list, 
-                    &presets.iter().map(|p| format!("{:0>3} {}", p.number, p.name)).collect::<Vec<_>>(), 
-                    if let Some(ref current_preset) = state.current_preset_and_scene {
-                        Some(current_preset.preset as usize)
-                    } else {
-                        None
-                    }
-                );
-                state.presets = presets;
+            Some(UiPayload::Presets(presets)) => {
+                {
+                    let mut state = self.device_state.borrow_mut();                
+                    state.presets = presets;
+                }
+                self.update_presets_list();
             },
             Some(UiPayload::Scenes(scenes)) => {
-                let mut state = self.device_state.borrow_mut();
-                update_list(&self.scenes_list,
-                    &scenes.iter().map(|s| format!("Scene {} {}", s.number + 1, s.name)).collect::<Vec<_>>(),
-                    if let Some(ref current_preset) = state.current_preset_and_scene {
-                        Some(current_preset.scene as usize)
-                    } else {
-                        None
-                    }
-                );
-                state.current_presets_scenes = scenes;
+                {
+                    let mut state = self.device_state.borrow_mut();
+                    state.current_presets_scenes = scenes;
+                }
+
+                self.update_scenes_list();
             },
             Some(UiPayload::CurrentBlocks(blocks)) => {
 
