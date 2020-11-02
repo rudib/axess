@@ -25,12 +25,20 @@ jobs:
       run: cargo test --verbose
     
     - name: Build (release)
-      run: cargo build --release
+      run: cargo build --release -- -C link_args="-Wl,--subsystem,windows"
       if: startsWith(github.ref, 'refs/tags/')
+    - name: Get the tag version
+      if: startsWith(github.ref, 'refs/tags/')
+      id: get_version
+      run: echo ::set-output name=VERSION::${GITHUB_REF/refs\/tags\//}
+      shell: bash
+    - name: Copy to versioned exe
+      if: startsWith(github.ref, 'refs/tags/')
+      run: copy target/release/axess.exe target/release/axess-${{ steps.get_version.outputs.VERSION }}.exe
     - name: Release (with tags)
       uses: softprops/action-gh-release@v1
       if: startsWith(github.ref, 'refs/tags/')
       with:
-        files: target/release/axess.exe
+        files: target/release/axess-*.exe
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
