@@ -206,13 +206,13 @@ pub fn get_main_keyboard_shortcuts(config: &AxessConfiguration) -> Vec<KeyboardS
         }
 
         s.push(KeyboardShortcut {
-            key: KeyboardShortcutKey::Key(Keys::Fn9),
+            key: KeyboardShortcutKey::Key(Keys::Fn11),
             command_description: "Preset Down".into(),
             command: ShortcutCommand::UiPayload(UiPayload::DeviceState(DeviceState::DeltaPreset { delta: -1 }))
         });
 
         s.push(KeyboardShortcut {
-            key: KeyboardShortcutKey::Key(Keys::Fn10),
+            key: KeyboardShortcutKey::Key(Keys::Fn12),
             command_description: "Preset Up".into(),
             command: ShortcutCommand::UiPayload(UiPayload::DeviceState(DeviceState::DeltaPreset { delta: 1 }))
         });
