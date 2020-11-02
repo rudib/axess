@@ -56,7 +56,7 @@ impl FractalWindow for ConnectWindow {
         &self.backend_response_notifier
     }
 
-    fn handle_ui_event(&self, event: UiEvent) -> bool {
+    fn handle_ui_event(&self, _event: UiEvent) -> bool {
         true
     }
 }
