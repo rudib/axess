@@ -5,7 +5,3 @@ members = [
 "axess_core",
 "axess_gui"
 ]
-
-[patch.crates-io]
-packed_struct = { git = "https://github.com/hashmismatch/packed_struct.rs", branch = "slice_v2" }
-packed_struct_codegen = { git = "https://github.com/hashmismatch/packed_struct.rs", branch = "slice_v2" }
