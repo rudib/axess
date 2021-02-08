@@ -19,7 +19,7 @@ pub enum FractalFunction {
     GET_PRESET_NAME = 0x0F,
     GET_SCENE_NAME = 0x0E,
     STATUS_DUMP = 0x13,
-    TUNER_ON_OF = 0x11,
+    TUNER_CMD = 0x11,
     REQUEST_TEMPO = 0x14,
     GET_GRID_LAYOUT_AND_ROUTING = 0x20,
     //GET_CPU_USAGE = 0x13,
@@ -29,3 +29,6 @@ pub enum FractalFunction {
 
 }
 
+
+pub const SYSEX_TUNER_ON: u8 = 0x01;
+pub const SYSEX_TUNER_OFF: u8 = 0x00;

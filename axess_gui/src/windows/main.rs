@@ -6,7 +6,7 @@ use log::trace;
 use std::{borrow::Borrow, cell::RefCell, sync::{Arc, Mutex}};
 
 use axess_core::{payload::{PayloadConnection, UiPayload, DeviceState, PresetAndScene}, payload};
-use super::{common::{FractalWindow, WindowApi}, connect::ConnectWindow, settings::SettingsWindow, update_list};
+use super::{common::{FractalWindow, WindowApi}, connect::ConnectWindow, settings::SettingsWindow, tuner::TunerWindow, update_list};
 use crate::{config::AxessConfiguration, device_state::FrontendDeviceState, windows::main::main_window_ui::MainWindowUi};
 use super::status_bar::*;
 use crate::windows::keyboard::*;
@@ -57,6 +57,13 @@ pub struct MainWindow {
 
     #[nwg_control(parent: menu_device)]
     menu_device_sep: nwg::MenuSeparator,
+
+    #[nwg_control(text: "&Tuner", parent: menu_device, disabled: true)]
+    #[nwg_events( OnMenuItemSelected: [MainWindow::on_tuner] )]
+    menu_device_tuner: nwg::MenuItem,
+
+    #[nwg_control(parent: menu_device)]
+    menu_device_sep_2: nwg::MenuSeparator,
 
     #[nwg_control(text: "Exit", parent: menu_device)]
     #[nwg_events( OnMenuItemSelected: [MainWindow::on_exit] )]
@@ -346,7 +353,8 @@ impl MainWindow {
                 self.main_controls_when_connected(true);
                 self.axess_status_bar.borrow_mut().op(&self.status_bar).push_message(AxessStatusBarMessageKind::Connected, format!("Connected to {}.", device));
                 self.menu_device_connect.set_enabled(false);
-                self.menu_device_disconnect.set_enabled(true);   
+                self.menu_device_disconnect.set_enabled(true);
+                self.menu_device_tuner.set_enabled(true);
                 *self.is_connected.borrow_mut() = true;
 
                 // request the presets
@@ -358,6 +366,7 @@ impl MainWindow {
                 self.axess_status_bar.borrow_mut().op(&self.status_bar).pop_message(AxessStatusBarMessageKind::Connected);
                 self.menu_device_connect.set_enabled(true);
                 self.menu_device_disconnect.set_enabled(false);
+                self.menu_device_tuner.set_enabled(false);
                 *self.is_connected.borrow_mut() = false;
                 *self.device_state.borrow_mut() = FrontendDeviceState::default();
             },
@@ -509,6 +518,10 @@ impl MainWindow {
             };
             self.blocks_bypass_toggle.set_text(button_label);
         }
+    }
+
+    fn on_tuner(&self) {
+        self.spawn_child::<TunerWindow>(());
     }
 
     fn on_settings(&self) {

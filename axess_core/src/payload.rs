@@ -24,6 +24,8 @@ pub enum UiPayload {
         i: usize,
         total: usize
     },
+    EnableTuner,
+    DisableTuner,
 
     /// Internal
     Ping,

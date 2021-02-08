@@ -4,7 +4,7 @@ use state::DeviceState;
 use packed_struct::PackedStructSlice;
 use crate::{payload::{PayloadConnection, UiPayload}, FractalResult, FractalResultVoid, utils::filter_first, transport::write_struct, transport::write_struct_dyn};
 use crate::transport::{Transport, midi::{Midi}, serial::TransportSerial, Endpoint};
-use fractal_protocol::{buffer::MessagesBuffer, messages::FractalAudioMessages, messages::effects::Blocks, messages::effects::BlocksHelper, messages::effects::EffectBypassHelper, messages::effects::EffectBypassStatus, messages::effects::EffectStatusHelper, messages::effects::Effects, messages::firmware_version::FirmwareVersionHelper, messages::multipurpose_response::MultipurposeResponseHelper, messages::preset::PresetHelper, messages::scene::SceneWithNameHelper, model::{FractalDevice}};
+use fractal_protocol::{buffer::MessagesBuffer, functions::{FractalFunction, SYSEX_TUNER_OFF, SYSEX_TUNER_ON}, messages::FractalAudioMessages, messages::effects::Blocks, messages::effects::BlocksHelper, messages::effects::EffectBypassHelper, messages::effects::EffectBypassStatus, messages::effects::EffectStatusHelper, messages::effects::Effects, messages::firmware_version::FirmwareVersionHelper, messages::multipurpose_response::MultipurposeResponseHelper, messages::preset::PresetHelper, messages::scene::SceneWithNameHelper, model::{FractalDevice}, structs::FractalAudioMessage};
 use std::{time::Duration, thread, pin::Pin};
 use log::{error, trace};
 use tokio::runtime::Runtime;
@@ -207,6 +207,18 @@ impl UiBackend {
                 let effect_status: EffectBypassStatus = device.send_and_wait_for(&mut EffectBypassHelper::set_effect_bypass(device.device.model, effect, is_bypassed))
                                                               .await.map_err(|_| FractalCoreError::MissingValue("Effect Bypass Status".into()))?;
                 self.send(UiPayload::EffectBypassStatus(effect_status)).await?;
+            }            
+            UiPayload::EnableTuner => {
+                let device = self.device.as_mut().ok_or(FractalCoreError::NotConnected)?;
+                
+                let mut msg = FractalAudioMessage::new(device.device.model, FractalFunction::TUNER_CMD, SYSEX_TUNER_ON);
+                device.write(&mut msg)?;
+            },
+            UiPayload::DisableTuner => {
+                let device = self.device.as_mut().ok_or(FractalCoreError::NotConnected)?;
+                
+                let mut msg = FractalAudioMessage::new(device.device.model, FractalFunction::TUNER_CMD, SYSEX_TUNER_OFF);
+                device.write(&mut msg)?;
             }
 
             // not for us
