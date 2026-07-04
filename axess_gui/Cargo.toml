@@ -35,5 +35,11 @@ directories = "3.0"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
 
+# native-windows-derive (pretranslate_callback fork) still uses the private
+# syn::group::parse_parens API, which was removed from syn's public surface
+# in 1.0.98. Pin the whole workspace's syn 1.x resolution to the last
+# version where that module was public.
+syn = "=1.0.95"
+
 [build-dependencies]
 vergen = "3"
